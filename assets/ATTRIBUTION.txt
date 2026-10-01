@@ -1,0 +1,10 @@
+もちた / Mochita
+
+Original 3D generated with Meshy AI (image-to-3D).
+Source platform: https://www.meshy.ai/
+Modified: rounded shape refinement, standing posture, tiny sole-down feet, walking animation, and web-display mesh simplification. Original AI/source identifiers and painted texture retained.
+
+Source-generation licensing review indicates attribution requirements under CC BY 4.0 for the applicable free-generation asset. License: https://creativecommons.org/licenses/by/4.0/
+Retain the applicable creator/title/source credit and license link when publishing. If the original generation record identifies an additional creator name or material URL, include it with this credit. Confirm the original generation-plan terms before commercial publication; this file does not override those terms.
+
+元3DはMeshy AIで生成。形状、立ち姿、小足、歩行、Web用軽量化の編集あり。適用されるCC BY 4.0条件に従い、公開時はMeshyと判明している元の制作者・取得元の帰属表示を保持してください。

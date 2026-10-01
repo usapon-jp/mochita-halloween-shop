@@ -20,7 +20,7 @@ export function halloweenInterior(world, cp, front, props) {
   Q.witchHat(ledge, -.95, 2.75, 0, .8); Q.pumpkin(ledge, .1, 2.75, 0, .55, { face: true }); Q.ghost(ledge, .95, 2.75, 0, .7, { noBlob: true });
   // ---- 吊るし飾り ----
   [[-1.3, 3.55, -2.3, .5, 1.0], [1.3, 3.55, -2.3, .55, .9], [-3.4, 3.4, -2.2, .45, .8], [3.5, 3.45, -2.2, .6, .9]].forEach(([x, y, z, l, s]) => Q.hangingGhost(props, x, y, z, l, s));
-  Q.spider(props, -2.8, 3.55, .8, -2.9); Q.spider(props, 3.2, 3.5, .65, -2.9); Q.spider(props, 0.0, 3.1, .5, -2.9);
+  Q.spider(props, -2.8, 3.55, .8, -2.9); Q.spider(props, 3.2, 3.5, .65, -2.9); Q.spider(props, 2.0, 3.35, .5, -2.9);
   Q.ghostBannerFlags(props, -3.9, 3.8, -2.0, 3.9, 3.8, -2.0, 11);
   // こうもり（壁にとまる）
   [[-2.3, 3.85], [-1.6, 3.95], [2.0, 3.9], [2.7, 3.8], [-3.3, 3.0], [3.5, 2.9]].forEach(([x, y], i) => Q.bat(props, x, y, -2.93, .9 + (i % 3) * .15, { flap: true }));
