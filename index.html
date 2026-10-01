@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>もちたの小さな雑貨とおやつのお店</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<canvas id="c" aria-label="もちたの小さな雑貨とおやつのお店の3D箱庭"></canvas>
+<div id="ui">
+  <h1>もちたの小さな雑貨とおやつのお店</h1>
+  <nav id="shots" aria-label="カメラ切り替え">
+    <button data-shot="counter" class="on">カウンター</button>
+    <button data-shot="overview">全景</button>
+    <button data-shot="window">窓辺</button>
+    <button data-shot="closeup">小物</button>
+    <button id="auto" aria-pressed="false">おまかせ</button>
+  </nav>
+  <p class="credit">キャラクター：もちた（モデルは今回未収録の箱庭のみ）・Three.js (MIT)</p>
+  <p class="hint">1–4 カメラ ・ T おまかせ ・ H UI非表示 ・ ダブルタップでも切替</p>
+</div>
+<button id="reveal" aria-label="UIを表示"></button>
+<div id="fallback" hidden>3Dを表示できませんでした。WebGL対応のブラウザで開いてください。</div>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
