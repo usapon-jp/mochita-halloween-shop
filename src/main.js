@@ -7,6 +7,7 @@ import { anim } from './props.js';
 import { SHOTS, CameraRig } from './cameras.js';
 import { MOCHITA, walkSpeed } from './config.js';
 import { buildProceduralMochita } from './mochita_proc.js';
+import { Walker, attachControls, pickTarget, takePhoto, buildProxies } from './play.js';
 const PAD_TOP = 0.045; // 座布団のミント敷物の上面（SLOTからの高さ）
 const q0 = new URLSearchParams(location.search);
 const MOCHITA_LOOK = { roughness: 0.8, tint: 1.0 }; // plain用: 光沢を抑え、白飛びしにくくする
@@ -241,20 +242,34 @@ async function placeMochita(url, opt = {}) {
   const gltf = await new GLTFLoader().loadAsync(url);
   finishPlace(gltf.scene, gltf.animations, opt); return gltf;
 }
-function finishPlace(root, animations, opt) {
-  const h = opt.height ?? MOCHITA.height, k = h / MOCHITA.rawHeight; root.scale.setScalar(k);
-  root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root), c = box.getCenter(new THREE.Vector3());
-  // x/z は見た目の中心を座布団の中心へ。足裏はミントの敷き物の上面(0.045)にちょうど乗せる（めり込み/浮き防止）
-  root.position.set(-c.x, PAD_TOP - box.min.y - .003, -c.z);
+function styleRoot(root) { // 影の設定・法線のなめらか化・質感（ぷっくり）
   root.traverse(o => {
     if (!o.isMesh) return; o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
     if (root.userData.styled) return;
     if (NSMOOTH > 0 && o.geometry.attributes.normal && o.geometry.index && o.geometry.attributes.position.count > 5000) smoothNormals(o.geometry, NSMOOTH, .5, o.material.map ? featureMask(o.geometry, o.material.map) : null);
     if (Array.isArray(o.material)) o.material = o.material.map(mt => styleMochita(mt, o)); else o.material = styleMochita(o.material, o);
   });
+}
+let walker = null;
+async function initWalker(standing, k, offset, h) { // 歩行版を読み込み、タップで歩けるようにする（静止版と同じ位置・大きさ）
+  try {
+    const gltf = await new GLTFLoader().loadAsync(MOCHITA.walk), wr = gltf.scene;
+    wr.scale.setScalar(k); wr.position.copy(offset); styleRoot(wr); wr.visible = false; shop.slot.add(wr);
+    const mixer = new THREE.AnimationMixer(wr), clip = gltf.animations.find(a => a.name === MOCHITA.walkClip) ?? gltf.animations[0], action = mixer.clipAction(clip);
+    action.timeScale = MOCHITA.playRate; action.play(); action.paused = true;
+    walker = new Walker({ slot: shop.slot, standing, walkRoot: wr, mixer, action, rig, h }); window.__walker = walker;
+  } catch (e) { console.warn('walk model load failed', e); }
+}
+function finishPlace(root, animations, opt) {
+  const h = opt.height ?? MOCHITA.height, k = h / MOCHITA.rawHeight; root.scale.setScalar(k);
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root), c = box.getCenter(new THREE.Vector3());
+  // x/z は見た目の中心を座布団の中心へ。足裏はミントの敷き物の上面(0.045)にちょうど乗せる（めり込み/浮き防止）
+  root.position.set(-c.x, PAD_TOP - box.min.y - .003, -c.z);
+  styleRoot(root);
   if (mochitaRoot) shop.slot.remove(mochitaRoot);
   mochitaRoot = root; shop.slot.add(root);
+  if (opt.playable) setTimeout(() => initWalker(root, k, root.position.clone(), h), 1200);
   mochitaMixer = null;
   if (animations?.length) {
     mochitaMixer = new THREE.AnimationMixer(root);
@@ -269,7 +284,7 @@ const q = new URLSearchParams(location.search);
 if (!q.has('nomodel')) {
   const sm = q.get('smooth'); // ?smooth=8|24 で平滑化した比較用GLB（元のGLBは無変更）
   const url = q.get('model') || (q.has('walk') ? MOCHITA.walk : sm ? (sm.startsWith('puffy') ? `assets/compare/mochita_standing_${sm}.glb` : `assets/compare/mochita_standing_smooth_${sm}.glb`) : MOCHITA.standing);
-  placeMochita(url, { height: parseFloat(q.get('h') || MOCHITA.height), rate: parseFloat(q.get('rate') || '1') }).catch(e => console.warn('mochita load failed', e));
+  placeMochita(url, { height: parseFloat(q.get('h') || MOCHITA.height), rate: parseFloat(q.get('rate') || '1'), playable: url === MOCHITA.standing && !q.has('noplay') }).catch(e => console.warn('mochita load failed', e));
 }
 
 // ?studio: 店を隠して、参考画像(壁紙)と同じ無地の背景でもちただけを見る（色・形の比較用）
@@ -302,10 +317,29 @@ addEventListener('keydown', e => {
   if (e.key >= '1' && e.key <= '4') { auto(false); setShot(order[+e.key - 1]); }
   else if (e.key === 'h' || e.key === 'H') toggleUI();
   else if (e.key === 't' || e.key === 'T') auto(!autoOn);
+  else if (e.key === 'p' || e.key === 'P') takePhoto(renderer, scene, rig.camera, toast, flash);
   else if (e.key === 'g' || e.key === 'G') ghost.visible = !ghost.visible;
 });
-let lastTap = 0;
-canvas.addEventListener('pointerup', () => { const n = performance.now(); if (n - lastTap < 320) toggleUI(); lastTap = n; });
+// ---- あそぶ操作: タップ=もちたが歩いてくる／ドラッグ=回す／ピンチ=拡大 ----
+const toast = msg => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 1800); };
+const flash = () => { const f = document.getElementById('flash'); f.classList.add('go'); setTimeout(() => f.classList.remove('go'), 120); };
+const pickables = buildProxies(); // 歩く場所を決めるための当たり判定（簡易な見えない箱）
+let tipHidden = false;
+function onTap(e) {
+  if (!walker) { toast('もちたの準備中…'); return; }
+  const sb = new THREE.Box3(new THREE.Vector3(walker.x - .5, walker.y - .02, walker.z - .45), new THREE.Vector3(walker.x + .5, walker.y + MOCHITA.height + .1, walker.z + .45));
+  const hit = pickTarget(e, canvas, rig.camera, pickables, sb);
+  if (!hit) return;
+  if (hit.self) { walker.jump(); return; }
+  if (!tipHidden) { tipHidden = true; document.getElementById('tip').classList.add('off'); }
+  auto(false); walker.goTo(hit.x, hit.z, hit.onCounter);
+}
+attachControls(canvas, rig, { onTap, onCamera: () => { auto(false); document.querySelectorAll('#shots [data-shot]').forEach(b => b.classList.remove('on')); } });
+document.getElementById('photo').addEventListener('click', () => takePhoto(renderer, scene, rig.camera, toast, flash));
+const credit = document.getElementById('credit');
+document.getElementById('info').addEventListener('click', () => { credit.hidden = !credit.hidden; });
+credit.addEventListener('click', e => { if (e.target.closest('a') === null) credit.hidden = true; });
+document.getElementById('eye').addEventListener('click', () => toggleUI());
 if (q.has('hideui')) document.body.classList.add('ui-hidden');
 if (q.has('ghost')) ghost.visible = true;
 
@@ -343,10 +377,11 @@ function tick() {
   for (const m of anim.leaves) { const l = m.userData.leaf; l.y -= l.sp * dt; l.x += Math.sin(T * .6 + l.ph) * .25 * dt; l.z += Math.cos(T * .5 + l.ph) * .15 * dt; if (l.y < .05) { l.y = l.h; l.x = l.bx.x[0] + Math.random() * (l.bx.x[1] - l.bx.x[0]); l.z = l.bx.z[0] + Math.random() * (l.bx.z[1] - l.bx.z[0]); } m.position.set(l.x, l.y, l.z); m.rotation.set(T * l.rs + l.ph, T * l.rs * .7, l.ph); }
   for (const c of clouds) { c.position.x = c.userData.base + Math.sin(T * c.userData.spd) * 3; }
   if (mochitaMixer) mochitaMixer.update(dt);
+  if (walker) walker.update(dt, T);
   if (autoOn) { autoT += dt; if (autoT > 7.5) { autoT = 0; setShot(order[(order.indexOf(current) + 1) % order.length]); } }
   rig.update(dt, T);
   shop.front.visible = current === 'overview' || (rig.k < .6 && prevShot === 'overview');
-  renderer.shadowMap.needsUpdate = (frameN++ % SHADOW_EVERY) === 0;
+  renderer.shadowMap.needsUpdate = (frameN++ % (walker?.walking ? 1 : SHADOW_EVERY)) === 0;
   renderer.render(scene, rig.camera);
   perf(dt);
   requestAnimationFrame(tick);

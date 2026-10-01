@@ -10,6 +10,12 @@
 <canvas id="c" aria-label="もちたの小さな雑貨とおやつのお店の3D箱庭"></canvas>
 <div id="ui">
   <h1>もちたの小さな雑貨とおやつのお店</h1>
+  <p id="tip">画面をタップ → もちたが歩いてくるよ<br><small>ドラッグで回す ・ ピンチで拡大 ・ 📷で写真</small></p>
+  <div id="tools">
+    <button id="photo" aria-label="写真をとる" title="写真をとる (P)">📷</button>
+    <button id="info" aria-label="クレジット" title="クレジット">ⓘ</button>
+    <button id="eye" aria-label="UIを隠す" title="UIを隠す (H)">👁</button>
+  </div>
   <nav id="shots" aria-label="カメラ切り替え">
     <button data-shot="counter" class="on">カウンター</button>
     <button data-shot="overview">全景</button>
@@ -17,10 +23,14 @@
     <button data-shot="closeup">小物</button>
     <button id="auto" aria-pressed="false">おまかせ</button>
   </nav>
-  <p class="credit">キャラクター：もちた　3D原型：<a href="https://www.meshy.ai/" target="_blank" rel="noopener">Meshy</a>で画像から生成（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）。造形・着色・立ち姿・歩行・軽量化を改変 ・ Three.js (MIT)</p>
-  <p class="hint">1–4 カメラ ・ T おまかせ ・ H UI非表示 ・ ダブルタップでも切替</p>
+  <aside id="credit" hidden>
+    <b>クレジット</b>
+    <p>キャラクター：もちた<br>3D原型：<a href="https://www.meshy.ai/" target="_blank" rel="noopener">Meshy</a>で画像から生成（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）。造形・着色・立ち姿・歩行・軽量化を改変。<br>Three.js (MIT)</p>
+    <small>タップで閉じる</small>
+  </aside>
 </div>
 <button id="reveal" aria-label="UIを表示"></button>
+<div id="flash"></div><div id="toast"></div>
 <div id="fallback" hidden>3Dを表示できませんでした。WebGL対応のブラウザで開いてください。</div>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <script type="module" src="./src/main.js"></script>
