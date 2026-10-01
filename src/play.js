@@ -37,7 +37,15 @@ export class Walker {
   // 目的地(x,z,onCounter)へ。段差があれば、縁まで歩いて「ぴょん」。
   goTo(tx, tz, tOnCounter) {
     const from = { x: this.x, z: this.z, c: this.onCounter }, steps = [];
-    if (from.c === tOnCounter) steps.push({ type: 'walk', x: tx, z: tz });
+    const d0 = Math.hypot(tx - from.x, tz - from.z) || 1, u0x = (tx - from.x) / d0, u0z = (tz - from.z) / d0;
+    if (from.c === tOnCounter) {
+      const ct = !from.c ? clipT(from.x, from.z, tx, tz, COUNTER) : null;
+      if (ct && (ct[1] - ct[0]) * d0 > .15) { // 床→床でも、まっすぐ行くとカウンターを突き抜ける場合: ジャンプして乗り越える
+        const ex0 = from.x + (tx - from.x) * ct[0], ez0 = from.z + (tz - from.z) * ct[0], ex1 = from.x + (tx - from.x) * ct[1], ez1 = from.z + (tz - from.z) * ct[1];
+        steps.push({ type: 'walk', x: ex0 - u0x * .3, z: ez0 - u0z * .3 }, { type: 'hop', x: ex0 + u0x * .15, z: ez0 + u0z * .15, c: true },
+          { type: 'walk', x: ex1 - u0x * .15, z: ez1 - u0z * .15 }, { type: 'hop', x: ex1 + u0x * .3, z: ez1 + u0z * .3, c: false }, { type: 'walk', x: tx, z: tz });
+      } else steps.push({ type: 'walk', x: tx, z: tz });
+    }
     else if (from.c) { // カウンター→床: 縁まで歩く→ぴょん→床を歩く
       const ct = clipT(from.x, from.z, tx, tz, COUNTER), t = ct ? ct[1] : 0, ex = from.x + (tx - from.x) * t, ez = from.z + (tz - from.z) * t, d = Math.hypot(tx - from.x, tz - from.z) || 1, ux = (tx - from.x) / d, uz = (tz - from.z) / d;
       steps.push({ type: 'walk', x: ex, z: ez }, { type: 'hop', x: ex + ux * .3, z: ez + uz * .3, c: false }, { type: 'walk', x: tx, z: tz });
@@ -61,9 +69,9 @@ export class Walker {
         else { const ty = Math.atan2(dx, dz), err = angDiff(this.yaw, ty); this.yaw += Math.sign(err) * Math.min(Math.abs(err), dt * 9);
           if (Math.abs(err) < .6) { const s = Math.min(dist, this.speed * dt); this.x += dx / dist * s; this.z += dz / dist * s; } }
       } else { // hop
-        if (st.t === undefined) { st.t = 0; st.x0 = this.x; st.z0 = this.z; st.y0 = this.y; st.y1 = surfaceY(st.x, st.z, st.c); st.dur = .5; }
+        if (st.t === undefined) { st.t = 0; st.x0 = this.x; st.z0 = this.z; st.y0 = this.y; st.y1 = surfaceY(st.x, st.z, st.c); st.big = Math.abs(st.y1 - st.y0) > .5; st.dur = st.big ? .75 : .5; }
         st.t = Math.min(1, st.t + dt / st.dur); const e = st.t * st.t * (3 - 2 * st.t);
-        this.x = st.x0 + (st.x - st.x0) * e; this.z = st.z0 + (st.z - st.z0) * e; this.y = st.y0 + (st.y1 - st.y0) * e + Math.sin(Math.PI * st.t) * .3;
+        this.x = st.x0 + (st.x - st.x0) * e; this.z = st.z0 + (st.z - st.z0) * e; this.y = st.y0 + (st.y1 - st.y0) * e + Math.sin(Math.PI * st.t) * (st.big ? .55 : .3);
         if (st.t >= 1) { this.onCounter = st.c; this.steps.shift(); }
       }
       if (!this.steps.length) { this.mode = 'face'; this.faceT = 0; this.setMoving(false); this.marker.visible = false; }
