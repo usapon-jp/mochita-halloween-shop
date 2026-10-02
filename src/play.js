@@ -27,40 +27,79 @@ export class Walker {
     Object.assign(this, { slot, standing, walkRoot, mixer, action, rig, h });
     this.rate = MOCHITA.playRate; this.speed = walkSpeed(h, this.rate);
     this.x = slot.position.x; this.z = slot.position.z; this.onCounter = true; this.yaw = 0; this.y = surfaceY(this.x, this.z, true);
-    this.mode = 'idle'; this.steps = []; this.faceT = 0; this.poke = 0;
+    this.mode = 'idle'; this.steps = []; this.faceT = 0; this.poke = 0; this.jy = 0; this.jv = 0; this.speedMul = 1;
     const g = new THREE.RingGeometry(.12, .17, 32), m = new THREE.MeshBasicMaterial({ color: 0xff9a4a, transparent: true, opacity: .85, depthWrite: false, side: THREE.DoubleSide });
     this.marker = new THREE.Mesh(g, m); this.marker.rotation.x = -Math.PI / 2; this.marker.visible = false; this.marker.renderOrder = 5; slot.parent.add(this.marker);
     this.action.paused = true;
   }
-  setRate(r) { this.rate = r; this.action.timeScale = r; this.speed = walkSpeed(this.h, r); }
-  get walking() { return this.mode === 'walk'; }
+  setRate(r) { this.rate = r; this.action.timeScale = r * this.speedMul; this.speed = walkSpeed(this.h, r); }
+  // ジャンプ（その場でぴょん。動きながらでも）／ダッシュ（押している間はやく走る。足の動きも同じ倍率で、すべらない）
+  jumpNow() { if (this.mode === 'manual' && this.jy === 0 && this.jv === 0) this.jv = 3.5; }
+  setDash(on) { this.speedMul = on ? 1.8 : 1; this.action.timeScale = this.rate * this.speedMul; }
+  get walking() { return this.mode === 'walk' || (this.mode === 'manual' && this.moving); }
+  head() { this._h ??= new THREE.Vector3(); return this._h.set(this.x, this.y + MOCHITA.height * .8, this.z); }
+  // ---- 手で動かす（十字ボタン / 矢印キー）。入力 input={x:右+, z:前+} はカメラの向き基準 ----
+  setManual(on) {
+    this.manual = on; this.input = this.input ?? { x: 0, z: 0 };
+    if (on) { this.steps = []; this.marker.visible = false; this.mode = 'manual'; this.moving = false; this.setMoving(false); }
+    else { this.input.x = 0; this.input.z = 0; this.mode = 'idle'; this.moving = false; this.setMoving(false); }
+  }
+  manualUpdate(dt) {
+    const inp = this.input, mag = Math.hypot(inp.x, inp.z);
+    if (mag < .15) { if (this.moving) { this.moving = false; this.setMoving(false); } return; }
+    const v = (this._v ??= new THREE.Vector3()); this.rig.camera.getWorldDirection(v);
+    const fl = Math.hypot(v.x, v.z) || 1, fx = v.x / fl, fz = v.z / fl, rx = -fz, rz = fx;
+    let dx = fx * inp.z + rx * inp.x, dz = fz * inp.z + rz * inp.x; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    const ty = Math.atan2(dx, dz), err = angDiff(this.yaw, ty); this.yaw += Math.sign(err) * Math.min(Math.abs(err), dt * 10);
+    if (!this.moving) { this.moving = true; this.setMoving(true); }
+    this.mixer.update(dt);
+    if (Math.abs(err) > .9) return;
+    const s = this.speed * this.speedMul * dt; let nx = this.x + dx * s, nz = this.z + dz * s;
+    const insideC = (x, z) => inRect(x, z, COUNTER);
+    if (!this.onCounter && insideC(nx, nz) && !insideC(this.x, this.z)) { // 床→カウンター: ジャンプで乗る
+      const hx = this.x + dx * .45, hz = this.z + dz * .45; if (insideC(hx, hz)) { this.steps = [{ type: 'hop', x: hx, z: hz, c: true }]; this.mode = 'walk'; return; } return;
+    }
+    if (this.onCounter && !insideC(nx, nz)) { // カウンター→床: ジャンプで降りる
+      const hx = this.x + dx * .5, hz = this.z + dz * .5; if (!blockedAt(hx, hz) && inRect(hx, hz, ISLAND)) { this.steps = [{ type: 'hop', x: hx, z: hz, c: false }]; this.mode = 'walk'; } return;
+    }
+    if (!this.onCounter) { // 壁・棚・家具は通れない（片方の軸だけ進めて、すべる）
+      if (blockedAt(nx, this.z)) nx = this.x; if (blockedAt(this.x, nz)) nz = this.z; if (blockedAt(nx, nz)) { nx = this.x; nz = this.z; }
+      nx = THREE.MathUtils.clamp(nx, ISLAND.x0, ISLAND.x1); nz = THREE.MathUtils.clamp(nz, ISLAND.z0, ISLAND.z1);
+    }
+    this.x = nx; this.z = nz;
+  }
   setMoving(on) { this.standing.visible = !on; this.walkRoot.visible = on; this.action.paused = !on; }
   // 目的地(x,z,onCounter)へ。段差があれば、縁まで歩いて「ぴょん」。
   goTo(tx, tz, tOnCounter) {
     const from = { x: this.x, z: this.z, c: this.onCounter }, steps = [];
+    const floorLeg = (x0, z0, x1, z1) => floorPath(x0, z0, x1, z1).forEach(s => steps.push({ type: 'walk', x: s.x, z: s.z }));
     const d0 = Math.hypot(tx - from.x, tz - from.z) || 1, u0x = (tx - from.x) / d0, u0z = (tz - from.z) / d0;
     if (from.c === tOnCounter) {
       const ct = !from.c ? clipT(from.x, from.z, tx, tz, COUNTER) : null;
       if (ct && (ct[1] - ct[0]) * d0 > .15) { // 床→床でも、まっすぐ行くとカウンターを突き抜ける場合: ジャンプして乗り越える
         const ex0 = from.x + (tx - from.x) * ct[0], ez0 = from.z + (tz - from.z) * ct[0], ex1 = from.x + (tx - from.x) * ct[1], ez1 = from.z + (tz - from.z) * ct[1];
-        steps.push({ type: 'walk', x: ex0 - u0x * .3, z: ez0 - u0z * .3 }, { type: 'hop', x: ex0 + u0x * .15, z: ez0 + u0z * .15, c: true },
-          { type: 'walk', x: ex1 - u0x * .15, z: ez1 - u0z * .15 }, { type: 'hop', x: ex1 + u0x * .3, z: ez1 + u0z * .3, c: false }, { type: 'walk', x: tx, z: tz });
-      } else steps.push({ type: 'walk', x: tx, z: tz });
-    }
-    else if (from.c) { // カウンター→床: 縁まで歩く→ぴょん→床を歩く
-      const ct = clipT(from.x, from.z, tx, tz, COUNTER), t = ct ? ct[1] : 0, ex = from.x + (tx - from.x) * t, ez = from.z + (tz - from.z) * t, d = Math.hypot(tx - from.x, tz - from.z) || 1, ux = (tx - from.x) / d, uz = (tz - from.z) / d;
-      steps.push({ type: 'walk', x: ex, z: ez }, { type: 'hop', x: ex + ux * .3, z: ez + uz * .3, c: false }, { type: 'walk', x: tx, z: tz });
+        floorLeg(from.x, from.z, ex0 - u0x * .32, ez0 - u0z * .32);
+        steps.push({ type: 'hop', x: ex0 + u0x * .15, z: ez0 + u0z * .15, c: true }, { type: 'walk', x: ex1 - u0x * .15, z: ez1 - u0z * .15 }, { type: 'hop', x: ex1 + u0x * .32, z: ez1 + u0z * .32, c: false });
+        floorLeg(ex1 + u0x * .32, ez1 + u0z * .32, tx, tz);
+      } else if (from.c) steps.push({ type: 'walk', x: tx, z: tz });
+      else floorLeg(from.x, from.z, tx, tz);
+    } else if (from.c) { // カウンター→床: 縁まで歩く→ぴょん→床を歩く
+      const ct = clipT(from.x, from.z, tx, tz, COUNTER), t = ct ? ct[1] : 0, ex = from.x + (tx - from.x) * t, ez = from.z + (tz - from.z) * t;
+      steps.push({ type: 'walk', x: ex, z: ez }, { type: 'hop', x: ex + u0x * .32, z: ez + u0z * .32, c: false });
+      floorLeg(ex + u0x * .32, ez + u0z * .32, tx, tz);
     } else { // 床→カウンター
-      const ct = clipT(from.x, from.z, tx, tz, COUNTER), t = ct ? ct[0] : 1, ex = from.x + (tx - from.x) * t, ez = from.z + (tz - from.z) * t, d = Math.hypot(tx - from.x, tz - from.z) || 1, ux = (tx - from.x) / d, uz = (tz - from.z) / d;
-      steps.push({ type: 'walk', x: ex - ux * .3, z: ez - uz * .3 }, { type: 'hop', x: ex + ux * .12, z: ez + uz * .12, c: true }, { type: 'walk', x: tx, z: tz });
+      const ct = clipT(from.x, from.z, tx, tz, COUNTER), t = ct ? ct[0] : 1, ex = from.x + (tx - from.x) * t, ez = from.z + (tz - from.z) * t;
+      floorLeg(from.x, from.z, ex - u0x * .32, ez - u0z * .32);
+      steps.push({ type: 'hop', x: ex + u0x * .12, z: ez + u0z * .12, c: true }, { type: 'walk', x: tx, z: tz });
     }
     this.steps = steps; this.mode = 'walk'; this.setMoving(true);
-    this.marker.position.set(tx, surfaceY(tx, tz, tOnCounter) + .02, tz); this.marker.visible = true; this.markerLevel = tOnCounter;
+    const last = steps[steps.length - 1]; this.marker.position.set(last.x, surfaceY(last.x, last.z, tOnCounter) + .02, last.z); this.marker.visible = true;
   }
   jump() { if (this.mode === 'idle') this.poke = .0001; }
   update(dt, T) {
     const cam = this.rig.camera.position;
-    if (this.mode === 'walk') {
+    if (this.mode === 'manual') this.manualUpdate(dt);
+    else if (this.mode === 'walk') {
       this.mixer.update(dt);
       const st = this.steps[0];
       if (!st) this.mode = 'face';
@@ -75,7 +114,7 @@ export class Walker {
         this.x = st.x0 + (st.x - st.x0) * e; this.z = st.z0 + (st.z - st.z0) * e; this.y = st.y0 + (st.y1 - st.y0) * e + Math.sin(Math.PI * st.t) * (st.big ? .55 : .3);
         if (st.t >= 1) { this.onCounter = st.c; this.steps.shift(); }
       }
-      if (!this.steps.length) { this.mode = 'face'; this.faceT = 0; this.setMoving(false); this.marker.visible = false; }
+      if (!this.steps.length) { if (this.manual) { this.mode = 'manual'; } else { this.mode = 'face'; this.faceT = 0; this.setMoving(false); this.marker.visible = false; } }
     } else if (this.mode === 'face') { // 止まって、こっち（カメラ）を向く
       this.faceT += dt; const ty = Math.atan2(cam.x - this.x, cam.z - this.z), err = angDiff(this.yaw, ty);
       this.yaw += Math.sign(err) * Math.min(Math.abs(err), dt * 6); if (Math.abs(err) < .02 || this.faceT > 1.2) this.mode = 'idle';
@@ -85,7 +124,8 @@ export class Walker {
     const hopping = this.mode === 'walk' && this.steps[0]?.type === 'hop';
     if (!hopping) { const ty = surfaceY(this.x, this.z, this.onCounter); this.y += (ty - this.y) * Math.min(1, dt * 14); }
     const bounce = this.poke > 0 ? Math.sin(Math.PI * Math.min(1, this.poke / .45)) * .12 : 0;
-    this.slot.position.set(this.x, this.y - PAD_TOP + bounce, this.z); this.slot.rotation.y = this.yaw;
+    if (this.jy > 0 || this.jv > 0) { this.jv -= 9.8 * dt; this.jy = Math.max(0, this.jy + this.jv * dt); if (this.jy === 0) this.jv = 0; }
+    this.slot.position.set(this.x, this.y - PAD_TOP + bounce + this.jy, this.z); this.slot.rotation.y = this.yaw;
   }
 }
 
@@ -104,6 +144,60 @@ const PROXIES = [ // [x0,x1,y0,y1,z0,z1]
   [1.45, 2.75, 0, .6, 1.6, 2.2],              // 陳列台
   [-1.0, 1.0, 0, .6, -2.8, -2.0],             // カウンター奥の箱・かご
 ];
+// 床の上で通れない物。もちたの当たり判定（手で動かすとき・タップで歩くとき）。
+// 四角 [x0,x1,z0,z1] と 円 [x,z,半径]。位置は箱庭の座標。
+const BLOCK_RECTS = [
+  [-4.25, 4.25, -3.4, -2.97], [-4.3, -3.97, -3.3, 3.1], [3.97, 4.3, -3.3, .45],            // 壁（奥・左・右）
+  [-3.95, -1.85, -3.0, -2.5], [1.85, 3.95, -3.0, -2.5],                                      // 棚
+  [1.45, 2.75, 1.6, 2.2], [-1.0, 1.0, -2.8, -2.0],                                           // 陳列台・カウンター奥の箱
+  [3.0, 3.8, -2.45, -1.95],                                                                  // 藁
+  [-6.9, -3.5, 5.05, 5.75], [3.5, 6.9, 5.05, 5.75],                                          // 手前の花壇
+  [5.6, 6.8, -1.2, 2.2], [7.0, 8.2, -1.6, 1.8], [8.4, 9.6, -1.8, 1.4], [9.8, 11.0, -2.2, 1.0], // かぼちゃ畑
+  [-5.1, -.9, 7.0, 7.2], [.5, 6.5, 7.0, 7.2], [7.8, 14.2, 8.1, 8.3], [6.8, 10.8, -5.9, -5.7], // フェンス
+  [11.8, 12.6, 1.6, 2.2], [11.2, 12.0, -1.8, -1.4],                                          // 庭の藁
+];
+const BLOCK_CIRCLES = [
+  [-3.5, .8, .5], [-2.5, 1.7, .6], [-3.1, 2.2, .26], [-1.8, 2.3, .26], [-.7, -1.7, .24], [.7, -1.7, .24], [-1.55, -2.25, .27], // 看板・丸テーブル・スツール・樽
+  [-3.3, 1.0, .38], [3.4, -.9, .38], [-3.45, -1.2, .3], [3.5, 2.5, .3], [3.15, 2.55, .28], [3.5, 2.15, .28], [-3.7, 2.7, .26], [3.6, 1.0, .26], [1.2, 2.8, .22], [.4, 2.7, .27], // 店内の物
+  [-1.9, 6.6, .2], [2.6, 6.6, .2], [6.0, 5.8, .2], [10.5, 1.8, .2],                         // 街灯
+  [8.2, 4.2, 1.1], [9.2, 4.2, 1.15], [10.2, 4.2, 1.1], [9.2, 3.6, 1.0], [9.2, 4.8, 1.0],      // 池
+  [7.4, 2.2, .62], [6.5, 2.5, .24], [8.3, 2.0, .24], [7.6, 3.2, .24],                          // パラソルテーブル・スツール
+  [3.5, 4.2, .62], [11.8, .3, .32], [3.3, 6.8, .38], [5.9, 7.4, .32],                          // ベンチ・かかし・釜
+  [-6.2, 1.6, .25], [-5.5, 1.0, .25], [-6.5, 2.7, .25], [-5.7, 2.3, .25],                      // 墓石
+  [-.2, 4.2, .5], [2.4, 4.1, .46], [10.4, -2.9, .5], [-3.0, -1.2, .0],                         // かぼちゃの山
+  [-6.4, -3.8, .42], [6.2, -3.6, .46], [-3.2, -5.0, .38], [1.0, -5.0, .42], [4.8, -4.9, .38], [12.2, -2.6, .46], [8.8, -4.4, .46], [11.6, 3.0, .4], [6.4, -4.8, .38], [-7.0, 3.4, .4], [-6.0, 6.2, .4], [-7.4, .6, .4], [13.0, 7.2, .4], [3.4, -5.6, .36], [-5.2, -4.7, .34], // 木の幹
+];
+const BODY_R = .28;
+const blockedAt = (x, z, r = BODY_R) => BLOCK_RECTS.some(([x0, x1, z0, z1]) => x > x0 - r && x < x1 + r && z > z0 - r && z < z1 + r) || BLOCK_CIRCLES.some(([cx, cz, cr]) => cr > 0 && Math.hypot(x - cx, z - cz) < cr + r);
+// ---- 経路探索（障害物をよけて歩く）: 0.25m格子のA*＋直線化 ----
+const GR = { s: .25, x0: ISLAND.x0, z0: ISLAND.z0 }; GR.nx = Math.ceil((ISLAND.x1 - ISLAND.x0) / GR.s) + 1; GR.nz = Math.ceil((ISLAND.z1 - ISLAND.z0) / GR.s) + 1;
+let _grid = null;
+const gridBlocked = () => (_grid ??= (() => { const g = new Uint8Array(GR.nx * GR.nz); for (let k = 0; k < GR.nz; k++) for (let i = 0; i < GR.nx; i++) { const x = GR.x0 + i * GR.s, z = GR.z0 + k * GR.s; g[i + k * GR.nx] = (blockedAt(x, z) || inRect(x, z, COUNTER, .0)) ? 1 : 0; } return g; })());
+const lineClear = (x0, z0, x1, z1) => { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(d / .1)); for (let i = 0; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (blockedAt(x, z) || inRect(x, z, COUNTER, 0)) return false; } return true; };
+function nearestFree(x, z) { const g = gridBlocked(); const ci = Math.round((x - GR.x0) / GR.s), ck = Math.round((z - GR.z0) / GR.s); for (let r = 0; r < 14; r++) { let best = null, bd = 1e9; for (let k = ck - r; k <= ck + r; k++) for (let i = ci - r; i <= ci + r; i++) { if (i < 0 || k < 0 || i >= GR.nx || k >= GR.nz || g[i + k * GR.nx]) continue; const d = Math.hypot(i - ci, k - ck); if (d < bd) { bd = d; best = [i, k]; } } if (best) return [GR.x0 + best[0] * GR.s, GR.z0 + best[1] * GR.s]; } return [x, z]; }
+export function floorPath(x0, z0, x1, z1) { // 床/庭の上の道順（障害物をよける）。[{x,z}...] 最後が目的地
+  if (lineClear(x0, z0, x1, z1)) return [{ x: x1, z: z1 }];
+  const g = gridBlocked(), idx = (i, k) => i + k * GR.nx, si = Math.round((x0 - GR.x0) / GR.s), sk = Math.round((z0 - GR.z0) / GR.s);
+  const [fx, fz] = nearestFree(x1, z1), ti = Math.round((fx - GR.x0) / GR.s), tk = Math.round((fz - GR.z0) / GR.s);
+  const open = [[0, si, sk]], came = new Map(), cost = new Map([[idx(si, sk), 0]]), closed = new Set();
+  const h = (i, k) => { const dx = Math.abs(i - ti), dk = Math.abs(k - tk); return (dx + dk) + (Math.SQRT2 - 2) * Math.min(dx, dk); };
+  let found = false, bestId = idx(si, sk), bestH = h(si, sk);
+  while (open.length) {
+    open.sort((a, b) => a[0] - b[0]); const [, ci, ck] = open.shift(), id = idx(ci, ck); if (closed.has(id)) continue; closed.add(id);
+    { const hh = h(ci, ck); if (hh < bestH) { bestH = hh; bestId = id; } }
+    if (ci === ti && ck === tk) { found = true; break; }
+    for (let dk = -1; dk <= 1; dk++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dk) continue; const ni = ci + di, nk = ck + dk; if (ni < 0 || nk < 0 || ni >= GR.nx || nk >= GR.nz) continue;
+      const nid = idx(ni, nk); if (g[nid] && !(ni === si && nk === sk)) continue; if (di && dk && (g[idx(ci + di, ck)] || g[idx(ci, ck + dk)])) continue; // 斜めは角をかすめない
+      const nc = cost.get(id) + (di && dk ? Math.SQRT2 : 1); if (nc < (cost.get(nid) ?? 1e9)) { cost.set(nid, nc); came.set(nid, id); open.push([nc + h(ni, nk), ni, nk]); }
+    }
+  }
+  // たどり着けないとき（壁や物に囲まれた所）は、行ける一番近い所まで
+  const cells = []; let id = found ? idx(ti, tk) : bestId; while (id !== undefined) { cells.push([GR.x0 + (id % GR.nx) * GR.s, GR.z0 + Math.floor(id / GR.nx) * GR.s]); id = came.get(id); } cells.reverse();
+  const pts = found ? [[x0, z0], ...cells, [fx, fz]] : [[x0, z0], ...cells]; const out = []; let a = 0; // 見通せる所まで直線にまとめる
+  while (a < pts.length - 1) { let b = pts.length - 1; while (b > a + 1 && !lineClear(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--; out.push({ x: pts[b][0], z: pts[b][1] }); a = b; }
+  return out;
+}
 export function buildProxies() {
   const mat = new THREE.MeshBasicMaterial(), out = [];
   for (const [x0, x1, y0, y1, z0, z1] of PROXIES) { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); m.visible = false; m.updateMatrixWorld(true); out.push(m); }

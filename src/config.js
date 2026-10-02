@@ -7,7 +7,7 @@ export const MOCHITA = {
   walkClip: 'Mochita_Approved_v4_TinyFoot_Walk_3s',
   walkLoopSec: 3.0,
   walkRawSpeedZ: 0.10,
-  playRate: 5,                                   // タップで歩くときの再生速度（トテトテ。前進速度は walkSpeed() で連動）                           // 元サイズで滑らない前進速度 (+Z 単位/秒)
+  playRate: 7,                                   // タップで歩くときの再生速度（トテトテ。前進速度は walkSpeed() で連動）                           // 元サイズで滑らない前進速度 (+Z 単位/秒)
 };
 // 表示サイズと再生速度に連動した、足が滑らない前進速度 [m/s]（h=0.95, rate=1 → 約0.04709）
 export const walkSpeed = (h = MOCHITA.height, rate = 1) => MOCHITA.walkRawSpeedZ * (h / MOCHITA.rawHeight) * rate;

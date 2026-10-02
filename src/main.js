@@ -307,11 +307,15 @@ function setShot(name, instant) {
   if (!SHOTS[name]) return; prevShot = current; current = name; instant ? rig.snap(name) : rig.go(name);
   document.querySelectorAll('#shots [data-shot]').forEach(b => b.classList.toggle('on', b.dataset.shot === name));
 }
-document.querySelectorAll('#shots [data-shot]').forEach(b => b.addEventListener('click', () => { auto(false); setShot(b.dataset.shot); }));
+document.querySelectorAll('#shots [data-shot]').forEach(b => b.addEventListener('click', () => { if (driving) setDriving(false); auto(false); setShot(b.dataset.shot); }));
 const order = ['counter', 'overview', 'window', 'closeup'];
 let autoOn = false, autoT = 0;
-function auto(v) { autoOn = v; autoT = 0; const b = document.getElementById('auto'); b.setAttribute('aria-pressed', v); }
-document.getElementById('auto').addEventListener('click', () => auto(!autoOn));
+function auto(v, say = true) {
+  if (autoOn === v) return; autoOn = v; autoT = 0; const b = document.getElementById('auto'); b.setAttribute('aria-pressed', v);
+  if (say) toast(v ? 'おまかせ ON: カメラが自動でめぐるよ' : 'おまかせをとめたよ');
+  if (v) { const nxt = order[(order.indexOf(current) + 1) % order.length]; setShot(nxt); } // 押したらすぐ動く
+}
+document.getElementById('auto').addEventListener('click', () => { if (driving) setDriving(false); auto(!autoOn); });
 const toggleUI = () => document.body.classList.toggle('ui-hidden');
 document.getElementById('reveal').addEventListener('click', () => { if (document.body.classList.contains('ui-hidden')) toggleUI(); });
 addEventListener('keydown', e => {
@@ -327,15 +331,57 @@ const flash = () => { const f = document.getElementById('flash'); f.classList.ad
 const pickables = buildProxies(); // 歩く場所を決めるための当たり判定（簡易な見えない箱）
 let tipHidden = false;
 function onTap(e) {
+  if (driving) return;
   if (!walker) { toast('もちたの準備中…'); return; }
   const sb = new THREE.Box3(new THREE.Vector3(walker.x - .5, walker.y - .02, walker.z - .45), new THREE.Vector3(walker.x + .5, walker.y + MOCHITA.height + .1, walker.z + .45));
   const hit = pickTarget(e, canvas, rig.camera, pickables, sb);
   if (!hit) return;
   if (hit.self) { walker.jump(); return; }
   if (!tipHidden) { tipHidden = true; document.getElementById('tip').classList.add('off'); }
-  auto(false); walker.goTo(hit.x, hit.z, hit.onCounter);
+  walker.goTo(hit.x, hit.z, hit.onCounter);
 }
 attachControls(canvas, rig, { onTap, onCamera: () => { auto(false); document.querySelectorAll('#shots [data-shot]').forEach(b => b.classList.remove('on')); } });
+// ---- もちたをうごかすモード: 十字ボタン / 矢印キー・WASD。カメラはあとを追いかける ----
+let driving = false; const dirs = new Set();
+const modeBtn = document.getElementById('mode');
+function setDriving(on) {
+  if (on && !walker) { toast('もちたの準備中…'); return; }
+  driving = on; document.body.classList.toggle('driving', on); modeBtn.setAttribute('aria-pressed', on);
+  if (!walker) return; walker.setManual(on); dirs.clear(); sv.id = null; sv.x = sv.z = 0; if (typeof knob !== 'undefined') { knob.style.transform = ''; stick.classList.remove('active'); stick.style.left = stick.style.top = stick.style.bottom = ''; } pushInput();
+  if (on) { auto(false, false); rig.beginFree(); rig.followFn = () => walker.head(); rig.free.goal = { r: 3.6, pitch: .4, yaw: rig.free.yaw }; /* 今のカメラの向きのまま近づく（壁の外に出ない） */ toast('画面の左側を触って動かすと、もちたが歩くよ'); }
+  else { rig.followFn = null; walker.setDash(false); btnDash.classList.remove('down'); toast('もとにもどったよ'); }
+}
+const zone = document.getElementById('stickzone'), stick = document.getElementById('stick'), knob = stick.querySelector('.knob'), sv = { x: 0, z: 0, id: null };
+function pushInput() { // スティック優先、なければ矢印キー
+  if (!walker) return; walker.input = walker.input ?? { x: 0, z: 0 };
+  const kx = (dirs.has('right') ? 1 : 0) - (dirs.has('left') ? 1 : 0), kz = (dirs.has('up') ? 1 : 0) - (dirs.has('down') ? 1 : 0);
+  walker.input.x = sv.id !== null ? sv.x : kx; walker.input.z = sv.id !== null ? sv.z : kz;
+}
+modeBtn.addEventListener('click', () => setDriving(!driving));
+// 浮かぶスティック: 左半分を触った所に現れ、つまみを動かした向き・強さで歩く（原神などと同じ作法）
+const STICK_R = 46; let sCenter = { x: 0, y: 0 };
+function stickMove(e) {
+  let dx = e.clientX - sCenter.x, dy = e.clientY - sCenter.y; const l = Math.hypot(dx, dy) || 1, k = Math.min(1, l / STICK_R), ux = dx / l, uy = dy / l;
+  knob.style.transform = `translate(${ux * k * STICK_R}px,${uy * k * STICK_R}px)`; sv.x = ux * k; sv.z = -uy * k; pushInput();
+}
+zone.addEventListener('pointerdown', e => {
+  e.preventDefault(); if (sv.id !== null) return; sv.id = e.pointerId; try { zone.setPointerCapture(e.pointerId); } catch {}
+  const zr = zone.getBoundingClientRect(), half = 66, x = Math.min(Math.max(e.clientX, zr.left + half + 8), zr.right - half - 8), y = Math.min(Math.max(e.clientY, zr.top + half + 8), zr.bottom - half - 8);
+  stick.style.left = (x - zr.left - half) + 'px'; stick.style.bottom = 'auto'; stick.style.top = (y - zr.top - half) + 'px'; sCenter = { x, y };
+  stick.classList.add('active'); knob.classList.add('drag'); stickMove(e);
+});
+zone.addEventListener('pointermove', e => { if (e.pointerId === sv.id) stickMove(e); });
+const stickEnd = e => { if (e.pointerId !== sv.id) return; sv.id = null; sv.x = sv.z = 0; stick.classList.remove('active'); knob.classList.remove('drag'); knob.style.transform = ''; stick.style.left = stick.style.top = stick.style.bottom = ''; pushInput(); };
+zone.addEventListener('pointerup', stickEnd); zone.addEventListener('pointercancel', stickEnd); zone.addEventListener('lostpointercapture', stickEnd); zone.addEventListener('contextmenu', e => e.preventDefault());
+const KEYDIR = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down', ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
+addEventListener('keydown', e => { const d = KEYDIR[e.key]; if (d && driving) { e.preventDefault(); dirs.add(d); pushInput(); } });
+addEventListener('keyup', e => { const d = KEYDIR[e.key]; if (d) { dirs.delete(d); pushInput(); } });
+// ジャンプ・ダッシュ（もちたモード）
+const btnJump = document.getElementById('btn-jump'), btnDash = document.getElementById('btn-dash');
+const hold = (el, on, off) => { const end = e => { if (el._d) { el._d = false; el.classList.remove('down'); off(); } }; el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch {} el._d = true; el.classList.add('down'); on(); }); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => el.addEventListener(t, end)); el.addEventListener('contextmenu', e => e.preventDefault()); };
+hold(btnJump, () => walker?.jumpNow(), () => {}); hold(btnDash, () => walker?.setDash(true), () => walker?.setDash(false));
+addEventListener('keydown', e => { if (!driving) return; if (e.key === ' ') { e.preventDefault(); walker?.jumpNow(); btnJump.classList.add('down'); } else if (e.key === 'Shift') { walker?.setDash(true); btnDash.classList.add('down'); } });
+addEventListener('keyup', e => { if (e.key === ' ') btnJump.classList.remove('down'); else if (e.key === 'Shift') { walker?.setDash(false); btnDash.classList.remove('down'); } });
 document.getElementById('photo').addEventListener('click', () => takePhoto(renderer, scene, rig.camera, toast, flash));
 const panel = document.getElementById('panel'), openPanel = v => { panel.hidden = !v; };
 document.getElementById('settings').addEventListener('click', () => openPanel(panel.hidden));
@@ -346,7 +392,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') openPanel(false); });
 const speedBtns = [...document.querySelectorAll('#speed [data-rate]')];
 function setSpeed(r, save = true) { speedBtns.forEach(b => b.classList.toggle('on', +b.dataset.rate === r)); MOCHITA.playRate = r; if (walker) walker.setRate(r); if (save) try { localStorage.setItem('mochita-rate', String(r)); } catch {} }
 speedBtns.forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.rate)));
-try { const r = +localStorage.getItem('mochita-rate'); if ([3, 5, 8].includes(r)) setSpeed(r, false); } catch {}
+try { const r = +localStorage.getItem('mochita-rate'); if ([4, 7, 10].includes(r)) setSpeed(r, false); } catch {}
 document.getElementById('eye').addEventListener('click', () => toggleUI());
 if (q.has('hideui')) document.body.classList.add('ui-hidden');
 if (q.has('ghost')) ghost.visible = true;
@@ -386,7 +432,7 @@ function tick() {
   for (const c of clouds) { c.position.x = c.userData.base + Math.sin(T * c.userData.spd) * 3; }
   if (mochitaMixer) mochitaMixer.update(dt);
   if (walker) walker.update(dt, T);
-  if (autoOn) { autoT += dt; if (autoT > 7.5) { autoT = 0; setShot(order[(order.indexOf(current) + 1) % order.length]); } }
+  if (autoOn) { autoT += dt; if (autoT > 6) { autoT = 0; setShot(order[(order.indexOf(current) + 1) % order.length]); } }
   rig.update(dt, T);
   shop.front.visible = current === 'overview' || (rig.k < .6 && prevShot === 'overview');
   renderer.shadowMap.needsUpdate = (frameN++ % (walker?.walking ? 1 : SHADOW_EVERY)) === 0;

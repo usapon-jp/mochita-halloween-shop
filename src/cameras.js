@@ -12,6 +12,7 @@ export const SHOTS = {
   closeup:  { pos: [-.4, 1.75, 2.0], target: [-2.05, 1.28, -.25], fov: 32, drift: { a: [.12, .05, .1], p: 11 }, mobileBack: .4 },
 };
 const ease = t => t * t * (3 - 2 * t);
+const angDiffC = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
 const ease2 = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 export class CameraRig {
@@ -29,10 +30,10 @@ export class CameraRig {
     this.free = { t, r, yaw: Math.atan2(o.x, o.z), pitch: Math.asin(THREE.MathUtils.clamp(o.y / r, -1, 1)) };
     this.k = 1;
   }
-  orbit(dx, dy) { const f = this.free; if (!f) return; f.yaw -= dx * .006; f.pitch = THREE.MathUtils.clamp(f.pitch + dy * .006, -.02, 1.45); }
-  zoom(s) { const f = this.free; if (!f) return; f.r = THREE.MathUtils.clamp(f.r * s, .9, 45); }
+  orbit(dx, dy) { const f = this.free; if (!f) return; f.goal = null; f.yaw -= dx * .006; f.pitch = THREE.MathUtils.clamp(f.pitch + dy * .006, -.02, 1.45); }
+  zoom(s) { const f = this.free; if (!f) return; f.goal = null; f.r = THREE.MathUtils.clamp(f.r * s, .9, 45); }
   pan(dx, dy) {
-    const f = this.free; if (!f) return; const k = f.r * .0016, m = this.camera.matrixWorld.elements;
+    const f = this.free; if (!f || this.followFn) return; f.goal = null; const k = f.r * .0016, m = this.camera.matrixWorld.elements;
     f.t.x += -dx * k * m[0] + dy * k * m[4]; f.t.y += -dx * k * m[1] + dy * k * m[5]; f.t.z += -dx * k * m[2] + dy * k * m[6];
     f.t.y = THREE.MathUtils.clamp(f.t.y, .15, 6); f.t.x = THREE.MathUtils.clamp(f.t.x, -9, 15); f.t.z = THREE.MathUtils.clamp(f.t.z, -8, 10);
   }
@@ -45,7 +46,10 @@ export class CameraRig {
   }
   update(dt, T) {
     if (this.free) {
-      const f = this.free, cp = Math.cos(f.pitch), pos = new THREE.Vector3(f.t.x + Math.sin(f.yaw) * cp * f.r, f.t.y + Math.sin(f.pitch) * f.r, f.t.z + Math.cos(f.yaw) * cp * f.r);
+      const f = this.free;
+      if (this.followFn) { const p = this.followFn(); if (p) f.t.lerp(p, 1 - Math.exp(-dt * 6)); }          // もちたを追いかける
+      if (f.goal) { const k = 1 - Math.exp(-dt * 4); f.r += (f.goal.r - f.r) * k; f.pitch += (f.goal.pitch - f.pitch) * k; f.yaw += angDiffC(f.yaw, f.goal.yaw) * k; if (Math.abs(f.r - f.goal.r) < .02 && Math.abs(f.pitch - f.goal.pitch) < .01 && Math.abs(angDiffC(f.yaw, f.goal.yaw)) < .01) f.goal = null; }
+      const cp = Math.cos(f.pitch), pos = new THREE.Vector3(f.t.x + Math.sin(f.yaw) * cp * f.r, f.t.y + Math.sin(f.pitch) * f.r, f.t.z + Math.cos(f.yaw) * cp * f.r);
       pos.y = Math.max(pos.y, .25); this.camera.position.copy(pos); this.camera.lookAt(f.t); this.camera.updateMatrixWorld(true); this.camera.updateProjectionMatrix();
       this.cur.pos.copy(pos); this.cur.tgt.copy(f.t); this.cur.fov = this.camera.fov; this.cur.drift = { a: [0, 0, 0], p: 10 }; return;
     }
