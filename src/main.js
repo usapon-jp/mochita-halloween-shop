@@ -13,6 +13,7 @@ const q0 = new URLSearchParams(location.search);
 const MOCHITA_LOOK = { roughness: 0.8, tint: 1.0 }; // plain用: 光沢を抑え、白飛びしにくくする
 
 const canvas = document.getElementById('c');
+document.body.dataset.theme = HALLOWEEN ? 'halloween' : 'pastel'; // UIの色（style.css）
 let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: new URLSearchParams(location.search).has('capture') });
