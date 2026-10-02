@@ -15,18 +15,8 @@ button{font:inherit;color:inherit}
 .fp{fill:var(--solid)}.fa{fill:var(--accent)}.fb{fill:var(--accent2)}
 
 /* 共通の面: 半透明のガラス＋白い細い縁＋やわらかい影 */
-h1,#shots,#tools button,#settings,#actions button,#tip,#toast{background:var(--glass);-webkit-backdrop-filter:blur(10px) saturate(1.25);backdrop-filter:blur(10px) saturate(1.25);border:1.5px solid rgba(255,255,255,.95);box-shadow:0 0 0 1px var(--hair),var(--shadow)}
-#ui h1{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;margin:0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.04em;padding:5px 15px 5px 8px;border-radius:999px;max-width:calc(100vw - 84px)}
-#ui h1 .ic{width:26px;height:26px}
-#ui h1 span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#area,#areas,#sys button,#tools button,#actions button,#tip,#toast{background:var(--glass);-webkit-backdrop-filter:blur(10px) saturate(1.25);backdrop-filter:blur(10px) saturate(1.25);border:1.5px solid rgba(255,255,255,.95);box-shadow:0 0 0 1px var(--hair),var(--shadow)}
 
-#shots{position:absolute;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:2px;padding:5px;border-radius:30px;pointer-events:auto;max-width:calc(100vw - 16px)}
-#shots button{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:62px;padding:5px 6px 4px;border:1.5px solid transparent;border-radius:22px;background:transparent;cursor:pointer;font-size:11.5px;font-weight:700;white-space:nowrap;transition:transform .12s,background .15s,box-shadow .15s}
-#shots button .ic{width:25px;height:25px}
-#shots button.on{background:linear-gradient(180deg,var(--accent-hi),var(--accent));border-color:rgba(255,255,255,.95);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 8px rgba(70,45,80,.2),0 0 14px rgba(248,178,106,.55)}
-#shots button#auto[aria-pressed=true]{background:linear-gradient(180deg,var(--accent2-hi),var(--accent2));border-color:rgba(255,255,255,.95);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 8px rgba(70,45,80,.2),0 0 14px rgba(190,160,240,.6)}
-#shots button:active{transform:scale(.94)}
-@media(hover:hover){#shots button:not(.on):hover{background:rgba(255,255,255,.55)}}
 
 /* ヒント: 「(A) なにに話してる？」のような、丸いマーク付きのふきだし */
 #tip{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:max(92px,calc(env(safe-area-inset-bottom) + 84px));display:flex;align-items:center;gap:9px;padding:6px 15px 6px 7px;border-radius:24px;transition:opacity .6s;pointer-events:none;max-width:calc(100vw - 100px)}
@@ -43,9 +33,6 @@ h1,#shots,#tools button,#settings,#actions button,#tip,#toast{background:var(--g
 #tools #mode .ic{width:33px;height:33px}
 #tools #mode[aria-pressed=true]{background:linear-gradient(180deg,var(--accent2-hi),var(--accent2));box-shadow:0 0 0 3px rgba(255,255,255,.75),0 0 0 4.5px var(--accent2),var(--shadow)}
 #tools button:active{transform:scale(.93)}
-#settings{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;width:42px;height:42px;padding:0;display:grid;place-items:center;border-radius:50%;cursor:pointer;pointer-events:auto;transition:transform .12s}
-#settings .ic{width:24px;height:24px}
-#settings:active{transform:scale(.93)}
 
 /* せってい（半透明の背景の上に、白っぽい角丸のカード） */
 #panel{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:rgba(60,35,55,.34);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:auto;z-index:4}
@@ -79,7 +66,7 @@ body:not(.ui-hidden) #reveal{pointer-events:none}
 #reveal{position:fixed;top:0;right:0;width:56px;height:56px;border:0;background:transparent;opacity:0;z-index:5}
 #fallback{position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center}
 #fallback[hidden]{display:none}
-@media(max-width:420px){#shots button{min-width:56px;font-size:11px;padding:5px 3px 4px}#ui h1{font-size:13px}#tip{padding-right:11px}#tip b{font-size:12.5px}}
+@media(max-width:420px){#tip{padding-right:11px}#tip b{font-size:12.5px}}
 
 /* もちたをうごかすモード: 画面の左半分を触った所に、半透明のスティック（さりげなく）。右半分のドラッグはカメラ。 */
 #stickzone{position:fixed;left:0;top:64px;bottom:0;width:52%;display:none;touch-action:none;-webkit-touch-callout:none;z-index:2}
@@ -95,7 +82,7 @@ body.driving #tip{opacity:0}
 #stick .r{right:7px;top:calc(50% - 5px);border-left:7px solid #fff;border-right:0}
 #stick .knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#fff 0,rgba(255,255,255,.88) 55%,rgba(255,236,214,.8) 100%);box-shadow:0 2px 10px rgba(70,45,80,.3),0 0 16px rgba(255,255,255,.6);transition:transform .18s cubic-bezier(.3,1.5,.5,1);will-change:transform}
 #stick .knob.drag{transition:none}
-#shots button#auto[aria-pressed=true] .ic{animation:spin 3.2s linear infinite}
+#areas #auto[aria-pressed=true] .ic{animation:spin 3.2s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ジャンプ・ダッシュ（もちたモードのときだけ、右下に） */
@@ -106,3 +93,34 @@ body.driving #actions{display:block}
 #btn-dash{right:12px;bottom:72px;width:50px;height:50px;background:linear-gradient(180deg,var(--accent-hi),var(--accent))}
 #actions .ic{width:32px;height:32px}#btn-dash .ic{width:30px;height:30px}
 #actions button.down{transform:scale(.92);box-shadow:0 0 0 3px rgba(255,255,255,.8),0 0 18px 3px rgba(255,255,255,.85),var(--shadow)}
+
+/* ---- 2026-10-02 整理: 左上=エリアのタグ（タップでカード）／右上=枠と歯車／右下=カメラともちた。下の横長バーはなし ---- */
+#area{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 118px);padding:5px 12px 5px 7px;border-radius:24px;cursor:pointer;pointer-events:auto;text-align:left;transition:transform .12s}
+#area:active{transform:scale(.97)}
+#area .ic{width:28px;height:28px}
+#area .txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+#area b{font-size:12px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#area small{font-size:11px;opacity:.85;display:flex;align-items:center;gap:5px}
+#area .chev{width:6px;height:6px;border-right:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+#area[aria-expanded=true] .chev{transform:rotate(-135deg) translateY(-1px)}
+#area[aria-expanded=true]{box-shadow:0 0 0 3px rgba(255,255,255,.7),0 0 14px rgba(248,178,106,.55),var(--shadow)}
+#areas{position:absolute;top:calc(max(12px,env(safe-area-inset-top)) + 56px);left:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;width:min(280px,calc(100vw - 24px));padding:8px;border-radius:26px;pointer-events:auto}
+#areas[hidden]{display:none}
+#areas button{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid transparent;border-radius:18px;background:transparent;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:transform .12s,background .15s,box-shadow .15s}
+#areas button .ic{width:26px;height:26px}
+#areas button.on{background:linear-gradient(180deg,var(--accent-hi),var(--accent));border-color:rgba(255,255,255,.95);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 8px rgba(70,45,80,.2),0 0 14px rgba(248,178,106,.55)}
+#areas #auto{grid-column:1 / -1;justify-content:center}
+#areas #auto[aria-pressed=true]{background:linear-gradient(180deg,var(--accent2-hi),var(--accent2));border-color:rgba(255,255,255,.95);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 8px rgba(70,45,80,.2),0 0 14px rgba(190,160,240,.6)}
+#areas button:active{transform:scale(.95)}
+@media(hover:hover){#areas button:not(.on):hover{background:rgba(255,255,255,.55)}}
+#sys{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;display:flex;gap:8px;pointer-events:auto}
+#sys button{width:42px;height:42px;padding:0;display:grid;place-items:center;border-radius:50%;cursor:pointer;transition:transform .12s}
+#sys button .ic{width:23px;height:23px}
+#sys button:active{transform:scale(.93)}
+#tools{bottom:max(26px,calc(env(safe-area-inset-bottom) + 20px))}
+#tip{bottom:max(26px,calc(env(safe-area-inset-bottom) + 20px))}
+@media(max-width:600px){#tip{left:12px;right:auto;margin:0;max-width:calc(100vw - 96px)}}
+#actions{bottom:max(26px,calc(env(safe-area-inset-bottom) + 20px));right:12px;width:62px;height:62px}
+#btn-jump{right:78px;bottom:-4px}
+#btn-dash{right:100px;bottom:62px}
+#stick{bottom:max(50px,calc(env(safe-area-inset-bottom) + 44px))}

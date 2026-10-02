@@ -305,15 +305,18 @@ rig.snap(current);
 let prevShot = current;
 function setShot(name, instant) {
   if (!SHOTS[name]) return; prevShot = current; current = name; instant ? rig.snap(name) : rig.go(name);
-  document.querySelectorAll('#shots [data-shot]').forEach(b => b.classList.toggle('on', b.dataset.shot === name));
+  document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.toggle('on', b.dataset.shot === name)); updateAreaLabel();
 }
-document.querySelectorAll('#shots [data-shot]').forEach(b => b.addEventListener('click', () => { if (driving) setDriving(false); auto(false); setShot(b.dataset.shot); }));
+document.querySelectorAll('#areas [data-shot]').forEach(b => b.addEventListener('click', () => { if (driving) setDriving(false); auto(false); setShot(b.dataset.shot); }));
 const order = ['counter', 'overview', 'window', 'closeup'];
 let autoOn = false, autoT = 0;
+const AREA_LABEL = { counter: 'カウンター', overview: '全景', window: '窓辺', closeup: '小物' };
+function updateAreaLabel() { const el = document.getElementById('area-cur'); if (!el) return; const on = document.querySelector('#areas [data-shot].on'); el.textContent = autoOn ? 'おまかせ中' : (on ? AREA_LABEL[on.dataset.shot] : 'じゆうなカメラ'); }
 function auto(v, say = true) {
   if (autoOn === v) return; autoOn = v; autoT = 0; const b = document.getElementById('auto'); b.setAttribute('aria-pressed', v);
   if (say) toast(v ? 'おまかせ ON: カメラが自動でめぐるよ' : 'おまかせをとめたよ');
   if (v) { const nxt = order[(order.indexOf(current) + 1) % order.length]; setShot(nxt); } // 押したらすぐ動く
+  updateAreaLabel();
 }
 document.getElementById('auto').addEventListener('click', () => { if (driving) setDriving(false); auto(!autoOn); });
 const toggleUI = () => document.body.classList.toggle('ui-hidden');
@@ -340,7 +343,7 @@ function onTap(e) {
   if (!tipHidden) { tipHidden = true; document.getElementById('tip').classList.add('off'); }
   walker.goTo(hit.x, hit.z, hit.onCounter);
 }
-attachControls(canvas, rig, { onTap, onCamera: () => { auto(false); document.querySelectorAll('#shots [data-shot]').forEach(b => b.classList.remove('on')); } });
+attachControls(canvas, rig, { onTap, onCamera: () => { auto(false); document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.remove('on')); } });
 // ---- もちたをうごかすモード: 十字ボタン / 矢印キー・WASD。カメラはあとを追いかける ----
 let driving = false; const dirs = new Set();
 const modeBtn = document.getElementById('mode');
@@ -382,6 +385,13 @@ const hold = (el, on, off) => { const end = e => { if (el._d) { el._d = false; e
 hold(btnJump, () => walker?.jumpNow(), () => {}); hold(btnDash, () => walker?.setDash(true), () => walker?.setDash(false));
 addEventListener('keydown', e => { if (!driving) return; if (e.key === ' ') { e.preventDefault(); walker?.jumpNow(); btnJump.classList.add('down'); } else if (e.key === 'Shift') { walker?.setDash(true); btnDash.classList.add('down'); } });
 addEventListener('keyup', e => { if (e.key === ' ') btnJump.classList.remove('down'); else if (e.key === 'Shift') { walker?.setDash(false); btnDash.classList.remove('down'); } });
+// エリアのタグ（左上）: タップでカードが開く。外側タップ・Escで閉じる
+const areaBtn = document.getElementById('area'), areasCard = document.getElementById('areas');
+const openAreas = v => { areasCard.hidden = !v; areaBtn.setAttribute('aria-expanded', v); };
+areaBtn.addEventListener('click', e => { e.stopPropagation(); openAreas(areasCard.hidden); });
+areasCard.addEventListener('click', e => { if (e.target.closest('button')) openAreas(false); });
+document.addEventListener('pointerdown', e => { if (!areasCard.hidden && !areasCard.contains(e.target) && !areaBtn.contains(e.target)) openAreas(false); });
+addEventListener('keydown', e => { if (e.key === 'Escape') openAreas(false); });
 document.getElementById('photo').addEventListener('click', () => takePhoto(renderer, scene, rig.camera, toast, flash));
 const panel = document.getElementById('panel'), openPanel = v => { panel.hidden = !v; };
 document.getElementById('settings').addEventListener('click', () => openPanel(panel.hidden));

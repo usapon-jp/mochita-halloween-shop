@@ -81,25 +81,30 @@
   <div id="stick"><div class="base"><i class="chev u"></i><i class="chev d"></i><i class="chev l"></i><i class="chev r"></i></div><div class="knob"></div></div>
 </div>
 <div id="ui">
-  <h1><svg class="ic" aria-hidden="true"><use href="#ic-pumpkin"/></svg><span>もちたの小さな雑貨とおやつのお店</span></h1>
+  <button id="area" aria-haspopup="true" aria-expanded="false" aria-controls="areas" title="エリアをえらぶ">
+    <svg class="ic" aria-hidden="true"><use href="#ic-pumpkin"/></svg>
+    <span class="txt"><b>もちたの小さな雑貨とおやつのお店</b><small><span id="area-cur">カウンター</span><i class="chev"></i></small></span>
+  </button>
+  <div id="areas" role="menu" hidden>
+    <button data-shot="counter" class="on" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-cup"/></svg><span>カウンター</span></button>
+    <button data-shot="overview" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-house"/></svg><span>全景</span></button>
+    <button data-shot="window" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-window"/></svg><span>窓辺</span></button>
+    <button data-shot="closeup" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-jar"/></svg><span>小物</span></button>
+    <button id="auto" aria-pressed="false" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-star"/></svg><span>おまかせ</span></button>
+  </div>
+  <div id="sys">
+    <button id="eye" aria-label="画面だけを見る（UIを隠す）" title="画面だけを見る (H)"><svg class="ic" aria-hidden="true"><use href="#ic-frame"/></svg></button>
+    <button id="settings" aria-label="せってい（あそびかた・クレジット）" title="せってい"><svg class="ic" aria-hidden="true"><use href="#ic-gear"/></svg></button>
+  </div>
   <p id="tip"><svg class="ic" aria-hidden="true"><use href="#ic-tap"/></svg><b>画面をタップした場所まで、<br>もちたが来るよ</b></p>
-  <button id="settings" aria-label="せってい（あそびかた・クレジット）" title="せってい"><svg class="ic" aria-hidden="true"><use href="#ic-gear"/></svg></button>
   <div id="tools">
     <button id="photo" aria-label="写真をとる" title="写真をとる (P)"><svg class="ic" aria-hidden="true"><use href="#ic-camera"/></svg></button>
     <button id="mode" aria-label="もちたをうごかす" aria-pressed="false" title="もちたをうごかす"><svg class="ic" aria-hidden="true"><use href="#ic-mochi"/></svg></button>
-    <button id="eye" aria-label="画面だけを見る（UIを隠す）" title="画面だけを見る (H)"><svg class="ic" aria-hidden="true"><use href="#ic-frame"/></svg></button>
   </div>
   <div id="actions" aria-label="アクション">
     <button id="btn-jump" aria-label="ジャンプ" title="ジャンプ (Space)"><svg class="ic" aria-hidden="true"><use href="#ic-jump"/></svg></button>
     <button id="btn-dash" aria-label="ダッシュ（押している間）" title="ダッシュ (Shift)"><svg class="ic" aria-hidden="true"><use href="#ic-dash"/></svg></button>
   </div>
-  <nav id="shots" aria-label="カメラ切り替え">
-    <button data-shot="counter" class="on"><svg class="ic" aria-hidden="true"><use href="#ic-cup"/></svg><span>カウンター</span></button>
-    <button data-shot="overview"><svg class="ic" aria-hidden="true"><use href="#ic-house"/></svg><span>全景</span></button>
-    <button data-shot="window"><svg class="ic" aria-hidden="true"><use href="#ic-window"/></svg><span>窓辺</span></button>
-    <button data-shot="closeup"><svg class="ic" aria-hidden="true"><use href="#ic-jar"/></svg><span>小物</span></button>
-    <button id="auto" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#ic-star"/></svg><span>おまかせ</span></button>
-  </nav>
   <div id="panel" hidden>
     <section role="dialog" aria-modal="true" aria-labelledby="panel-title">
       <header><h2 id="panel-title">せってい</h2><button id="panel-close" aria-label="とじる"><svg class="ic" aria-hidden="true"><use href="#ic-close"/></svg></button></header>
