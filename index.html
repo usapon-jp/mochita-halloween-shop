@@ -90,6 +90,7 @@
     <button data-warp="shop" class="warp" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-cup"/></svg><span>お店のなか</span></button>
     <button data-warp="front" class="warp" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-house"/></svg><span>お店のまえ</span></button>
     <button data-warp="garden" class="warp" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-pumpkin"/></svg><span>お庭</span></button>
+    <div id="sweets"></div>
     <button data-shot="counter" class="on" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-cup"/></svg><span>カウンター</span></button>
     <button data-shot="overview" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-house"/></svg><span>全景</span></button>
     <button data-shot="window" role="menuitem"><svg class="ic" aria-hidden="true"><use href="#ic-window"/></svg><span>窓辺</span></button>
@@ -107,6 +108,7 @@
     <button id="btn-jump" aria-label="ジャンプ" title="ジャンプ (Space)"><svg class="ic" aria-hidden="true"><use href="#ic-jump"/></svg></button>
     <button id="mode" aria-label="もちたをうごかす" aria-pressed="false" title="もちたをうごかす"><svg class="ic" aria-hidden="true"><use href="#ic-mochi"/></svg></button>
   </div>
+  <div id="placebar" hidden><p id="pb-msg"></p><input id="pb-name" maxlength="12" hidden aria-label="ワープ地点のなまえ" autocomplete="off"><div class="pb-btns"><button id="pb-yes" class="yes">はい</button><button id="pb-no">いいえ</button></div></div>
   <div id="panel" hidden>
     <section role="dialog" aria-modal="true" aria-labelledby="panel-title">
       <header><h2 id="panel-title">せってい</h2><button id="panel-close" aria-label="とじる"><svg class="ic" aria-hidden="true"><use href="#ic-close"/></svg></button></header>
@@ -118,6 +120,7 @@
         <li><b>2本指</b><span>カメラを平行にうごかす（PCは右ドラッグ）</span></li>
         <li><b>もちたボタン</b><span>押すと、画面の左側を触った所にスティックが出る。動かした向きに、もちたが歩く。右側のドラッグでカメラを回す（もういちど押すともどる）</span></li>
         <li><b>ジャンプ・ダッシュ</b><span>もちたモードで、右下のボタン。ダッシュは押している間、はやく走る（PC: Space / Shift）</span></li>
+        <li><b>プレゼントボックス</b><span>お店や お庭に かくれているよ。ちかづくと あいて、お菓子が出てくる。もちたモードでタグを開き、お菓子を好きな場所に置くと、そこへワープできる（なまえもつけられる）</span></li>
         <li><b>カメラ</b><span>いまの画面を写真にする</span></li>
         <li><b>枠のボタン</b><span>画面だけを見る。右上をタップでもどる</span></li>
         <li><b>下のボタン</b><span>カメラの切りかえ ・ おまかせで自動めぐり</span></li>
@@ -127,6 +130,8 @@
       <div class="seg" id="speed" role="group" aria-label="あるくはやさ">
         <button data-rate="4">ゆっくり</button><button data-rate="7" class="on">ふつう</button><button data-rate="10">はやい</button>
       </div>
+      <h3>お菓子さがし</h3>
+      <div class="seg"><button id="sweets-reset">はじめからやりなおす</button></div>
       <details class="credit">
         <summary>クレジット</summary>
         <p>キャラクター：もちた<br>3D原型：<a href="https://www.meshy.ai/" target="_blank" rel="noopener">Meshy</a>で画像から生成（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）。造形・着色・立ち姿・歩行・軽量化を改変。<br>Three.js (MIT)</p>

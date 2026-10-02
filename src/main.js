@@ -7,6 +7,7 @@ import { anim } from './props.js';
 import { SHOTS, CameraRig } from './cameras.js';
 import { MOCHITA, walkSpeed } from './config.js';
 import { buildProceduralMochita } from './mochita_proc.js';
+import { SweetHunt } from './sweets.js';
 import { Walker, attachControls, pickTarget, takePhoto, buildProxies } from './play.js';
 const PAD_TOP = 0.045; // 座布団のミント敷物の上面（SLOTからの高さ）
 const q0 = new URLSearchParams(location.search);
@@ -336,6 +337,7 @@ const flash = () => { const f = document.getElementById('flash'); f.classList.ad
 const pickables = buildProxies(); // 歩く場所を決めるための当たり判定（簡易な見えない箱）
 let tipHidden = false;
 function onTap(e) {
+  if (hunt?.placing) { hunt.pick(e); return; }
   if (driving) return;
   if (!walker) { toast('もちたの準備中…'); return; }
   const sb = new THREE.Box3(new THREE.Vector3(walker.x - .5, walker.y - .02, walker.z - .45), new THREE.Vector3(walker.x + .5, walker.y + MOCHITA.height + .1, walker.z + .45));
@@ -347,6 +349,7 @@ function onTap(e) {
 }
 attachControls(canvas, rig, { onTap, onCamera: () => { auto(false); document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.remove('on')); } });
 // ---- もちたをうごかすモード: 十字ボタン / 矢印キー・WASD。カメラはあとを追いかける ----
+let hunt = null;
 let driving = false; const dirs = new Set();
 const modeBtn = document.getElementById('mode');
 function setDriving(on) {
@@ -354,7 +357,7 @@ function setDriving(on) {
   driving = on; document.body.classList.toggle('driving', on); modeBtn.setAttribute('aria-pressed', on); updateAreaLabel();
   if (!walker) return; walker.setManual(on); dirs.clear(); sv.id = null; sv.x = sv.z = 0; if (typeof knob !== 'undefined') { knob.style.transform = ''; stick.classList.remove('active'); stick.style.left = stick.style.top = stick.style.bottom = ''; } pushInput();
   if (on) { auto(false, false); rig.beginFree(); rig.followFn = () => walker.head(); rig.free.goal = { r: 3.6, pitch: .4, yaw: rig.free.yaw }; /* 今のカメラの向きのまま近づく（壁の外に出ない） */ toast('画面の左側を触って動かすと、もちたが歩くよ'); }
-  else { rig.followFn = null; walker.setDash(false); btnDash.classList.remove('down'); document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.remove('on')); updateAreaLabel(); toast('もとにもどったよ'); }
+  else { hunt?.cancel(); rig.followFn = null; walker.setDash(false); btnDash.classList.remove('down'); document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.remove('on')); updateAreaLabel(); toast('もとにもどったよ'); }
 }
 const zone = document.getElementById('stickzone'), stick = document.getElementById('stick'), knob = stick.querySelector('.knob'), sv = { x: 0, z: 0, id: null };
 function pushInput() { // スティック優先、なければ矢印キー
@@ -391,7 +394,9 @@ addEventListener('keyup', e => { if (e.key === ' ') btnJump.classList.remove('do
 const areaBtn = document.getElementById('area'), areasCard = document.getElementById('areas');
 const openAreas = v => { areasCard.hidden = !v; areaBtn.setAttribute('aria-expanded', v); };
 areaBtn.addEventListener('click', e => { e.stopPropagation(); openAreas(areasCard.hidden); });
-areasCard.addEventListener('click', e => { if (e.target.closest('button')) openAreas(false); });
+areasCard.addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.act !== 'more') openAreas(false); });
+hunt = new SweetHunt({ parent: shop.slot.parent, canvas, camera: () => rig.camera, walker: () => walker, toast, driving: () => driving, closeCard: () => openAreas(false) });
+document.getElementById('sweets-reset').addEventListener('click', () => { if (confirm('見つけたお菓子と おいた場所を ぜんぶ消して、はじめからにします。いいですか？')) hunt.reset(); });
 document.addEventListener('pointerdown', e => { if (!areasCard.hidden && !areasCard.contains(e.target) && !areaBtn.contains(e.target)) openAreas(false); });
 addEventListener('keydown', e => { if (e.key === 'Escape') openAreas(false); });
 document.getElementById('photo').addEventListener('click', () => takePhoto(renderer, scene, rig.camera, toast, flash));
@@ -444,6 +449,7 @@ function tick() {
   for (const c of clouds) { c.position.x = c.userData.base + Math.sin(T * c.userData.spd) * 3; }
   if (mochitaMixer) mochitaMixer.update(dt);
   if (walker) walker.update(dt, T);
+  hunt?.update(dt, T);
   if (autoOn) { autoT += dt; if (autoT > 6) { autoT = 0; setShot(order[(order.indexOf(current) + 1) % order.length]); } }
   rig.update(dt, T);
   shop.front.visible = current === 'overview' || (rig.k < .6 && prevShot === 'overview');

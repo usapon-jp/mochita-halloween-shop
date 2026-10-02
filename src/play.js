@@ -4,14 +4,14 @@ import { MOCHITA, walkSpeed } from './config.js';
 
 // 歩ける場所（元の箱庭の座標）。段差(カウンター↔床)は「ぴょん」と跳ぶ。
 export const COUNTER = { x0: -2.95, x1: 2.95, z0: -1.15, z1: .15, y: 1.0 };
-const CUSHION = { x: 0, z: -.45, r: .5, lift: .045 }, SHOP = { x0: -4, x1: 4, z0: -3, z1: 3 }, ISLAND = { x0: -7.4, x1: 13.4, z0: -5.7, z1: 8.5 };
+export const CUSHION = { x: 0, z: -.45, r: .5, lift: .045 }, SHOP = { x0: -4, x1: 4, z0: -3, z1: 3 }, ISLAND = { x0: -7.4, x1: 13.4, z0: -5.7, z1: 8.5 };
 export const PAD_TOP = .045;
 export function surfaceY(x, z, onCounter) {
   if (onCounter) return COUNTER.y + (Math.hypot(x - CUSHION.x, z - CUSHION.z) < CUSHION.r ? CUSHION.lift : 0);
   if (x > SHOP.x0 && x < SHOP.x1 && z > SHOP.z0 && z < SHOP.z1 + .35) { const t = z > SHOP.z1 ? Math.min(1, (z - SHOP.z1) / .35) : 0; return .1 * (1 - t) - .01 * t; }
   return -.01;
 }
-const inRect = (x, z, r, m = 0) => x > r.x0 - m && x < r.x1 + m && z > r.z0 - m && z < r.z1 + m;
+export const inRect = (x, z, r, m = 0) => x > r.x0 - m && x < r.x1 + m && z > r.z0 - m && z < r.z1 + m;
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
 // 線分(a→b)が矩形に入る/出るt（Liang–Barsky）
 function clipT(ax, az, bx, bz, r) {
@@ -169,7 +169,7 @@ const BLOCK_CIRCLES = [
   [-6.4, -3.8, .42], [6.2, -3.6, .46], [-3.2, -5.0, .38], [1.0, -5.0, .42], [4.8, -4.9, .38], [12.2, -2.6, .46], [8.8, -4.4, .46], [11.6, 3.0, .4], [6.4, -4.8, .38], [-7.0, 3.4, .4], [-6.0, 6.2, .4], [-7.4, .6, .4], [13.0, 7.2, .4], [3.4, -5.6, .36], [-5.2, -4.7, .34], // 木の幹
 ];
 const BODY_R = .28;
-const blockedAt = (x, z, r = BODY_R) => BLOCK_RECTS.some(([x0, x1, z0, z1]) => x > x0 - r && x < x1 + r && z > z0 - r && z < z1 + r) || BLOCK_CIRCLES.some(([cx, cz, cr]) => cr > 0 && Math.hypot(x - cx, z - cz) < cr + r);
+export const blockedAt = (x, z, r = BODY_R) => BLOCK_RECTS.some(([x0, x1, z0, z1]) => x > x0 - r && x < x1 + r && z > z0 - r && z < z1 + r) || BLOCK_CIRCLES.some(([cx, cz, cr]) => cr > 0 && Math.hypot(x - cx, z - cz) < cr + r);
 // ---- 経路探索（障害物をよけて歩く）: 0.25m格子のA*＋直線化 ----
 const GR = { s: .25, x0: ISLAND.x0, z0: ISLAND.z0 }; GR.nx = Math.ceil((ISLAND.x1 - ISLAND.x0) / GR.s) + 1; GR.nz = Math.ceil((ISLAND.z1 - ISLAND.z0) / GR.s) + 1;
 let _grid = null;

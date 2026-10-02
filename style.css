@@ -130,3 +130,36 @@ body.driving #areas #auto{opacity:.4}
 #areas .warp{display:none}
 body.driving #areas .warp{display:flex;grid-column:1 / -1}
 body.driving #areas [data-shot],body.driving #areas #auto{display:none}
+
+/* ---- お菓子さがし ---- */
+#areas{max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);overflow-y:auto}
+#sweets{display:none;grid-column:1 / -1}
+body.driving #sweets{display:block}
+#sweets .sw-head{display:flex;justify-content:space-between;align-items:baseline;margin:8px 8px 2px;padding-top:8px;border-top:1.5px dashed var(--hair);font-size:13px}
+#sweets .sw-head span{font-size:11.5px;opacity:.75}
+#sweets .sw-hint{margin:4px 8px 4px;font-size:11px;line-height:1.5;opacity:.75}
+#sweets .sw-line{display:flex;gap:4px;align-items:center}
+#sweets button{border:1.5px solid transparent;background:transparent;border-radius:18px;cursor:pointer;color:inherit;font:inherit}
+#sweets .sw-main{flex:1;display:flex;align-items:center;gap:8px;padding:6px 8px;text-align:left;min-width:0}
+#sweets .sw-main span{display:flex;flex-direction:column;min-width:0}
+#sweets .sw-main b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sweets .sw-main small{font-size:10.5px;opacity:.7}
+#sweets .sw-main .ic{width:30px;height:30px}
+#sweets .sw-more{width:34px;height:34px;padding:0;display:grid;place-items:center}#sweets .sw-more .ic{width:22px;height:22px}
+#sweets .sw-main:active,#sweets .sw-more:active{transform:scale(.96)}
+@media(hover:hover){#sweets button:hover{background:rgba(255,255,255,.55)}}
+#sweets .sw-edit{display:none;gap:6px;padding:0 8px 6px 46px}
+#sweets .sw-row.open .sw-edit{display:flex}
+#sweets .sw-edit button{flex:1;padding:6px 4px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.7);border-color:var(--hair)}
+#placebar{position:absolute;top:calc(max(12px,env(safe-area-inset-top)) + 60px);left:50%;translate:-50% 0;width:min(340px,calc(100vw - 24px));padding:12px 14px;border-radius:22px;background:var(--glass);-webkit-backdrop-filter:blur(10px) saturate(1.25);backdrop-filter:blur(10px) saturate(1.25);border:1.5px solid rgba(255,255,255,.95);box-shadow:0 0 0 1px var(--hair),var(--shadow);pointer-events:auto;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;font-size:13px;line-height:1.5}
+#placebar[hidden]{display:none}
+#placebar p{margin:0}#placebar small{display:block;font-size:11px;opacity:.8}
+#placebar[data-ok=y]{box-shadow:0 0 0 2px #3ecf6a,0 0 16px rgba(62,207,106,.5),var(--shadow)}
+#placebar[data-ok=n]{box-shadow:0 0 0 2px #ff5a5a,0 0 16px rgba(255,90,90,.45),var(--shadow)}
+#pb-name{width:100%;box-sizing:border-box;padding:8px 12px;border-radius:14px;border:1.5px solid var(--hair);font:inherit;font-size:16px;text-align:center;background:#fff;color:inherit}
+.pb-btns{display:flex;gap:8px}
+.pb-btns button{min-width:84px;padding:9px 14px;border-radius:16px;border:1.5px solid rgba(255,255,255,.95);background:rgba(255,255,255,.8);font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 0 0 1px var(--hair);color:inherit}
+.pb-btns button.yes{background:linear-gradient(180deg,var(--accent-hi),var(--accent))}
+.pb-btns button[hidden]{display:none}
+body.placing #stickzone{pointer-events:none}
+body.placing #cluster{opacity:.5}
