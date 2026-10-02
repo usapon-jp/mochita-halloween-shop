@@ -337,9 +337,16 @@ function onTap(e) {
 }
 attachControls(canvas, rig, { onTap, onCamera: () => { auto(false); document.querySelectorAll('#shots [data-shot]').forEach(b => b.classList.remove('on')); } });
 document.getElementById('photo').addEventListener('click', () => takePhoto(renderer, scene, rig.camera, toast, flash));
-const credit = document.getElementById('credit');
-document.getElementById('info').addEventListener('click', () => { credit.hidden = !credit.hidden; });
-credit.addEventListener('click', e => { if (e.target.closest('a') === null) credit.hidden = true; });
+const panel = document.getElementById('panel'), openPanel = v => { panel.hidden = !v; };
+document.getElementById('settings').addEventListener('click', () => openPanel(panel.hidden));
+document.getElementById('panel-close').addEventListener('click', () => openPanel(false));
+panel.addEventListener('click', e => { if (e.target === panel) openPanel(false); });
+addEventListener('keydown', e => { if (e.key === 'Escape') openPanel(false); });
+// 歩くはやさ（再生速度。前進速度は walkSpeed() で連動）
+const speedBtns = [...document.querySelectorAll('#speed [data-rate]')];
+function setSpeed(r, save = true) { speedBtns.forEach(b => b.classList.toggle('on', +b.dataset.rate === r)); MOCHITA.playRate = r; if (walker) walker.setRate(r); if (save) try { localStorage.setItem('mochita-rate', String(r)); } catch {} }
+speedBtns.forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.rate)));
+try { const r = +localStorage.getItem('mochita-rate'); if ([3, 5, 8].includes(r)) setSpeed(r, false); } catch {}
 document.getElementById('eye').addEventListener('click', () => toggleUI());
 if (q.has('hideui')) document.body.classList.add('ui-hidden');
 if (q.has('ghost')) ghost.visible = true;

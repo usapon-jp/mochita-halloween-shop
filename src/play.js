@@ -24,7 +24,7 @@ function clipT(ax, az, bx, bz, r) {
 
 export class Walker {
   constructor({ slot, standing, walkRoot, mixer, action, rig, h }) {
-    Object.assign(this, { slot, standing, walkRoot, mixer, action, rig });
+    Object.assign(this, { slot, standing, walkRoot, mixer, action, rig, h });
     this.rate = MOCHITA.playRate; this.speed = walkSpeed(h, this.rate);
     this.x = slot.position.x; this.z = slot.position.z; this.onCounter = true; this.yaw = 0; this.y = surfaceY(this.x, this.z, true);
     this.mode = 'idle'; this.steps = []; this.faceT = 0; this.poke = 0;
@@ -32,6 +32,7 @@ export class Walker {
     this.marker = new THREE.Mesh(g, m); this.marker.rotation.x = -Math.PI / 2; this.marker.visible = false; this.marker.renderOrder = 5; slot.parent.add(this.marker);
     this.action.paused = true;
   }
+  setRate(r) { this.rate = r; this.action.timeScale = r; this.speed = walkSpeed(this.h, r); }
   get walking() { return this.mode === 'walk'; }
   setMoving(on) { this.standing.visible = !on; this.walkRoot.visible = on; this.action.paused = !on; }
   // 目的地(x,z,onCounter)へ。段差があれば、縁まで歩いて「ぴょん」。

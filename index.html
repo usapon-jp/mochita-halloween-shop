@@ -14,10 +14,12 @@
       <path class="k fp" d="M7.6 17.8c0-2.7 1.6-4.1 4.3-4.1h5l2.6-3.9h8.7l2.6 3.9h5c2.7 0 4.3 1.4 4.3 4.1v15.6c0 2.8-1.7 4.3-4.3 4.3H11.9c-2.7 0-4.3-1.5-4.3-4.3z"/>
       <circle class="k fa" cx="24.2" cy="26" r="7.6"/>
     </symbol>
-    <symbol id="ic-info" viewBox="0 0 48 48">
-      <path class="k fb" d="M24.3 6.5c9.5-.2 17.5 7.3 17.4 17.2-.1 9.7-7.6 17.6-17.4 17.7C14.4 41.5 6.7 33.8 6.5 24c-.1-9.9 8-17.3 17.8-17.5z"/>
-      <circle cx="24.3" cy="16" r="2.5" fill="var(--ink)"/>
-      <path class="k" d="M24.3 22.6v12"/>
+    <symbol id="ic-gear" viewBox="0 0 48 48">
+      <path class="k fp" d="M21.1 11.3L21.4 5.8L26.6 5.6L26.9 11.3A13.2 13.2 0 0 1 31.0 12.8L30.9 13.0L35.2 9.2L39.0 12.7L35.3 16.9A13.2 13.2 0 0 1 36.9 21.0L37.0 21.0L42.3 21.4L42.4 26.6L36.8 26.9A13.2 13.2 0 0 1 35.2 31.0L35.1 30.9L38.7 35.1L35.1 38.7L31.1 35.4A13.2 13.2 0 0 1 27.0 36.9L27.0 37.0L26.6 42.6L21.4 42.6L21.1 36.7A13.2 13.2 0 0 1 17.0 35.2L17.1 35.1L12.8 38.9L9.1 35.3L12.7 31.1A13.2 13.2 0 0 1 11.1 27.0L11.0 27.0L5.8 26.6L5.5 21.4L11.1 21.0A13.2 13.2 0 0 1 12.8 17.0L12.8 17.0L9.3 12.9L12.8 9.2L17.1 13.0A13.2 13.2 0 0 1 21.0 11.1z"/>
+      <circle class="k" cx="24" cy="24" r="5.2"/>
+    </symbol>
+    <symbol id="ic-close" viewBox="0 0 48 48">
+      <path class="k" d="M12.5 12.8c7.6 7.4 15.2 15 22.8 22.6M35.4 12.4C27.8 20 20.2 27.8 12.6 35.6"/>
     </symbol>
     <symbol id="ic-frame" viewBox="0 0 48 48">
       <path class="k" d="M7.5 17V9.6c0-1.2.9-2.1 2.1-2.1H17M31 7.5h7.4c1.2 0 2.1.9 2.1 2.1V17M40.5 31v7.4c0 1.2-.9 2.1-2.1 2.1H31M17 40.5H9.6c-1.2 0-2.1-.9-2.1-2.1V31"/>
@@ -60,7 +62,7 @@
   <p id="tip"><svg class="ic" aria-hidden="true"><use href="#ic-tap"/></svg><b>タップで、もちたが歩いてくるよ</b></p>
   <div id="tools">
     <button id="photo" aria-label="写真をとる" title="写真をとる (P)"><svg class="ic" aria-hidden="true"><use href="#ic-camera"/></svg></button>
-    <button id="info" aria-label="クレジット" title="クレジット"><svg class="ic" aria-hidden="true"><use href="#ic-info"/></svg></button>
+    <button id="settings" aria-label="せってい（使い方・クレジット）" title="せってい"><svg class="ic" aria-hidden="true"><use href="#ic-gear"/></svg></button>
     <button id="eye" aria-label="画面だけを見る（UIを隠す）" title="画面だけを見る (H)"><svg class="ic" aria-hidden="true"><use href="#ic-frame"/></svg></button>
   </div>
   <nav id="shots" aria-label="カメラ切り替え">
@@ -70,11 +72,30 @@
     <button data-shot="closeup"><svg class="ic" aria-hidden="true"><use href="#ic-jar"/></svg><span>小物</span></button>
     <button id="auto" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#ic-star"/></svg><span>おまかせ</span></button>
   </nav>
-  <aside id="credit" hidden>
-    <b>クレジット</b>
-    <p>キャラクター：もちた<br>3D原型：<a href="https://www.meshy.ai/" target="_blank" rel="noopener">Meshy</a>で画像から生成（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）。造形・着色・立ち姿・歩行・軽量化を改変。<br>Three.js (MIT)</p>
-    <small>タップで閉じる</small>
-  </aside>
+  <div id="panel" hidden>
+    <section role="dialog" aria-modal="true" aria-labelledby="panel-title">
+      <header><h2 id="panel-title">せってい</h2><button id="panel-close" aria-label="とじる"><svg class="ic" aria-hidden="true"><use href="#ic-close"/></svg></button></header>
+      <h3>あそびかた</h3>
+      <ul class="how">
+        <li><b>タップ</b><span>もちたが歩いてくるよ。止まると、こっちを向くよ</span></li>
+        <li><b>ドラッグ</b><span>カメラを回す</span></li>
+        <li><b>ピンチ</b><span>拡大・縮小（PCはホイール）</span></li>
+        <li><b>2本指</b><span>カメラを平行にうごかす（PCは右ドラッグ）</span></li>
+        <li><b>カメラ</b><span>いまの画面を写真にする</span></li>
+        <li><b>枠のボタン</b><span>画面だけを見る。右上をタップでもどる</span></li>
+        <li><b>下のボタン</b><span>カメラの切りかえ ・ おまかせで自動めぐり</span></li>
+        <li class="pc"><b>PCのキー</b><span>1〜4 カメラ ・ H 画面だけ ・ T おまかせ ・ P 写真</span></li>
+      </ul>
+      <h3>あるくはやさ</h3>
+      <div class="seg" id="speed" role="group" aria-label="あるくはやさ">
+        <button data-rate="3">ゆっくり</button><button data-rate="5" class="on">ふつう</button><button data-rate="8">はやい</button>
+      </div>
+      <details class="credit">
+        <summary>クレジット</summary>
+        <p>キャラクター：もちた<br>3D原型：<a href="https://www.meshy.ai/" target="_blank" rel="noopener">Meshy</a>で画像から生成（<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）。造形・着色・立ち姿・歩行・軽量化を改変。<br>Three.js (MIT)</p>
+      </details>
+    </section>
+  </div>
 </div>
 <button id="reveal" aria-label="UIを表示"></button>
 <div id="flash"></div><div id="toast"></div>
