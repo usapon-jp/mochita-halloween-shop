@@ -34,6 +34,7 @@ export class Walker {
   }
   setRate(r) { this.rate = r; this.action.timeScale = r * this.speedMul; this.speed = walkSpeed(this.h, r); }
   // ジャンプ（その場でぴょん。動きながらでも）／ダッシュ（押している間はやく走る。足の動きも同じ倍率で、すべらない）
+  warpTo(x, z, c) { this.steps = []; this.x = x; this.z = z; this.onCounter = c; this.y = surfaceY(x, z, c); this.jv = 3.2; this.jy = .001; } // 場所へワープ（ぴょんと着地）
   jumpNow() { if (this.mode === 'manual' && this.jy === 0 && this.jv === 0) this.jv = 3.5; }
   setDash(on) { this.speedMul = on ? 1.8 : 1; this.action.timeScale = this.rate * this.speedMul; }
   get walking() { return this.mode === 'walk' || (this.mode === 'manual' && this.moving); }

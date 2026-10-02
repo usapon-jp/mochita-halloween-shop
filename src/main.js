@@ -307,18 +307,22 @@ function setShot(name, instant) {
   if (!SHOTS[name]) return; prevShot = current; current = name; instant ? rig.snap(name) : rig.go(name);
   document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.toggle('on', b.dataset.shot === name)); updateAreaLabel();
 }
-document.querySelectorAll('#areas [data-shot]').forEach(b => b.addEventListener('click', () => { if (driving) setDriving(false); auto(false); setShot(b.dataset.shot); }));
+const WARP = { counter: [0, -.45, true], overview: [.6, 5.6, false], window: [-2.9, -.2, false], closeup: [-2.0, -.4, true] };
+document.querySelectorAll('#areas [data-shot]').forEach(b => b.addEventListener('click', () => {
+  if (driving) { const w = WARP[b.dataset.shot]; if (w && walker) { walker.warpTo(...w); toast(AREA_LABEL[b.dataset.shot] + 'へワープ！'); } return; } // もちたモード中は、そこへもちたがワープ
+  auto(false); setShot(b.dataset.shot);
+}));
 const order = ['counter', 'overview', 'window', 'closeup'];
 let autoOn = false, autoT = 0;
 const AREA_LABEL = { counter: 'カウンター', overview: '全景', window: '窓辺', closeup: '小物' };
-function updateAreaLabel() { const el = document.getElementById('area-cur'); if (!el) return; const on = document.querySelector('#areas [data-shot].on'); el.textContent = autoOn ? 'おまかせ中' : (on ? AREA_LABEL[on.dataset.shot] : 'じゆうなカメラ'); }
+function updateAreaLabel() { const el = document.getElementById('area-cur'); if (!el) return; const on = document.querySelector('#areas [data-shot].on'); el.textContent = typeof driving !== 'undefined' && driving ? 'もちたモード' : autoOn ? 'おまかせ中' : (on ? AREA_LABEL[on.dataset.shot] : 'じゆうなカメラ'); }
 function auto(v, say = true) {
   if (autoOn === v) return; autoOn = v; autoT = 0; const b = document.getElementById('auto'); b.setAttribute('aria-pressed', v);
   if (say) toast(v ? 'おまかせ ON: カメラが自動でめぐるよ' : 'おまかせをとめたよ');
   if (v) { const nxt = order[(order.indexOf(current) + 1) % order.length]; setShot(nxt); } // 押したらすぐ動く
   updateAreaLabel();
 }
-document.getElementById('auto').addEventListener('click', () => { if (driving) setDriving(false); auto(!autoOn); });
+document.getElementById('auto').addEventListener('click', () => { if (driving) { toast('おまかせは、もちたモードをおわってから'); return; } auto(!autoOn); });
 const toggleUI = () => document.body.classList.toggle('ui-hidden');
 document.getElementById('reveal').addEventListener('click', () => { if (document.body.classList.contains('ui-hidden')) toggleUI(); });
 addEventListener('keydown', e => {
@@ -349,10 +353,10 @@ let driving = false; const dirs = new Set();
 const modeBtn = document.getElementById('mode');
 function setDriving(on) {
   if (on && !walker) { toast('もちたの準備中…'); return; }
-  driving = on; document.body.classList.toggle('driving', on); modeBtn.setAttribute('aria-pressed', on);
+  driving = on; document.body.classList.toggle('driving', on); modeBtn.setAttribute('aria-pressed', on); updateAreaLabel();
   if (!walker) return; walker.setManual(on); dirs.clear(); sv.id = null; sv.x = sv.z = 0; if (typeof knob !== 'undefined') { knob.style.transform = ''; stick.classList.remove('active'); stick.style.left = stick.style.top = stick.style.bottom = ''; } pushInput();
   if (on) { auto(false, false); rig.beginFree(); rig.followFn = () => walker.head(); rig.free.goal = { r: 3.6, pitch: .4, yaw: rig.free.yaw }; /* 今のカメラの向きのまま近づく（壁の外に出ない） */ toast('画面の左側を触って動かすと、もちたが歩くよ'); }
-  else { rig.followFn = null; walker.setDash(false); btnDash.classList.remove('down'); toast('もとにもどったよ'); }
+  else { rig.followFn = null; walker.setDash(false); btnDash.classList.remove('down'); document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.remove('on')); updateAreaLabel(); toast('もとにもどったよ'); }
 }
 const zone = document.getElementById('stickzone'), stick = document.getElementById('stick'), knob = stick.querySelector('.knob'), sv = { x: 0, z: 0, id: null };
 function pushInput() { // スティック優先、なければ矢印キー
