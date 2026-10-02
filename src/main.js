@@ -307,11 +307,9 @@ function setShot(name, instant) {
   if (!SHOTS[name]) return; prevShot = current; current = name; instant ? rig.snap(name) : rig.go(name);
   document.querySelectorAll('#areas [data-shot]').forEach(b => b.classList.toggle('on', b.dataset.shot === name)); updateAreaLabel();
 }
-const WARP = { counter: [0, -.45, true], overview: [.6, 5.6, false], window: [-2.9, -.2, false], closeup: [-2.0, -.4, true] };
-document.querySelectorAll('#areas [data-shot]').forEach(b => b.addEventListener('click', () => {
-  if (driving) { const w = WARP[b.dataset.shot]; if (w && walker) { walker.warpTo(...w); toast(AREA_LABEL[b.dataset.shot] + 'へワープ！'); } return; } // もちたモード中は、そこへもちたがワープ
-  auto(false); setShot(b.dataset.shot);
-}));
+const WARP = { shop: [0, -.45, true, 'お店のなか'], front: [.9, 3.7, false, 'お店のまえ'], garden: [6.4, 3.8, false, 'お庭'] };
+document.querySelectorAll('#areas [data-shot]').forEach(b => b.addEventListener('click', () => { auto(false); setShot(b.dataset.shot); }));
+document.querySelectorAll('#areas [data-warp]').forEach(b => b.addEventListener('click', () => { const w = WARP[b.dataset.warp]; if (w && walker && driving) { walker.warpTo(w[0], w[1], w[2]); toast(w[3] + 'へワープ！'); } }));
 const order = ['counter', 'overview', 'window', 'closeup'];
 let autoOn = false, autoT = 0;
 const AREA_LABEL = { counter: 'カウンター', overview: '全景', window: '窓辺', closeup: '小物' };
